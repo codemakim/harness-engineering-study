@@ -58,6 +58,59 @@ Agent harness = context 조립, tool 실행, memory 검색, 권한 검사, hook 
 다음 질문
 ```
 
+## 나중에 확장할 방향: AX 개발자 성장 커리큘럼
+
+이 repo는 현재 `Agent literacy`와 `Harness engineering`에 초점을 둔다. AX 개발자 또는 Agentic AI Engineer 포지션까지 이어가려면, 이후에는 “에이전트가 어떻게 동작하는가”에서 “업무를 어떻게 AI 중심으로 바꾸는가”로 확장해야 한다.
+
+나중에 추가할 장 후보:
+
+11. `AX 개발자는 무엇을 하는가`  
+    AX를 단순 LLM API 개발이 아니라 업무 분석, 자동화 설계, 현업 정착, 성과 측정까지 포함하는 역할로 정리한다. 웹 개발자가 왜 이 영역에 강점을 가질 수 있는지도 다룬다.
+
+12. `AX 프로젝트는 어떻게 발견하고 설계하는가`  
+    어떤 업무가 agent에 적합한지, 어떤 업무는 일반 CRUD/스크립트/자동화가 더 나은지 판단하는 법을 다룬다. 업무 flow를 쪼개고, 병목과 반복 작업을 찾고, human-in-the-loop 지점을 정한다.
+
+13. `평가와 운영: 데모에서 실제 업무 도구로`  
+    agent 품질을 어떻게 측정할지, 실패 로그와 재시도, 권한, 보안, 비용, latency, 사용자 피드백, ROI를 어떻게 다룰지 정리한다.
+
+이 확장은 바로 개발 목록으로 가면 안 된다. 먼저 개념과 이유를 설명해야 한다.
+
+```text
+왜 AX는 단순 챗봇 개발이 아닌가?
+왜 업무 분석이 먼저인가?
+왜 평가/evaluation 없이는 실무 도입이 위험한가?
+왜 human-in-the-loop가 필요한가?
+왜 웹 개발자의 API/DB/권한/운영 경험이 AX에 강점인가?
+```
+
+그 다음에야 실제 예제로 넘어간다.
+
+```text
+업무 하나 선택
+→ 현재 flow 기록
+→ AI 적용 후보 찾기
+→ agent/tool/workflow 설계
+→ 작은 prototype
+→ 평가 기준 설정
+→ 운영/보안/권한 검토
+→ 현업 사용성 피드백
+```
+
+현재 repo의 위치:
+
+```text
+1단계: Agent literacy
+2단계: Harness engineering
+```
+
+추가로 가야 할 위치:
+
+```text
+3단계: Workflow automation
+4단계: Evaluation & operations
+5단계: AX delivery
+```
+
 ## 주요 공식 문서
 
 - [Codex skills](https://developers.openai.com/codex/skills)
