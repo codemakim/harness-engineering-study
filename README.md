@@ -1,62 +1,61 @@
-# Harness Engineering Study
+# Harness Engineering for Web Developers
 
-Codex의 `AGENTS.md`, Skills, Hooks, Plugins가 어떻게 LLM 행동을 바꾸는지 공부하는 개인 노트.
+Caveman과 Ponytail로 배우는 Codex 에이전트 구조.
 
-출발점은 `caveman`, `ponytail` 플러그인 분석이다. 목표는 나중에 직접 설치 가능한 Codex 플러그인/에이전트 하네스를 만드는 것.
+이 repo는 “무언가를 만든다”보다 “왜 그렇게 동작하는지 이해한다”에 초점을 둔 강의형 노트다. 대상 독자는 AI 전공자가 아니라, 서버/API/DB/middleware/tooling 감각이 있는 웹 개발자다.
 
-## 읽는 순서
+## 목표
 
-1. [LLM과 에이전트의 기본 동작 원리](docs/01-llm-agent-foundations.md)  
-   모델 자체와 에이전트 하네스를 분리해서 보는 기초. Telegram + Node LLM 서버 경험과 Codex를 비교한다.
-
-2. [Codex의 context surface: AGENTS.md, Skills, 기본 정신모델](docs/02-codex-context-surfaces.md)  
-   어떤 지시문이 어디서 발견되고, 언제 context에 들어가는지 정리한다.
-
-3. [Hooks와 lifecycle](docs/03-hooks-and-lifecycle.md)  
-   세션 시작, 유저 프롬프트 제출, 툴 사용 전후에 스크립트가 어떻게 실행되는지 정리한다.
-
-4. [Caveman / Ponytail case study](docs/04-caveman-ponytail-case-study.md)  
-   왜 Ponytail은 Settings > Hooks에 뜨고 Caveman은 안 뜨는지, 로컬 설치 파일 기준으로 분석한다.
-
-5. [직접 에이전트/플러그인 만들기](docs/05-building-your-own-agent.md)  
-   최소 plugin 구조, mini mode plugin 실험, 하네스 엔지니어링 체크리스트.
-
-6. [정정 사항, 레퍼런스, 다음 질문](docs/06-corrections-references-next.md)  
-   헷갈렸던 표현 정정, 공식 문서 링크, 앞으로 파볼 질문 목록.
-
-## 핵심 요약
+프롬프트 몇 줄을 외우는 것이 아니라, LLM 주변의 runtime을 이해한다.
 
 ```text
-LLM
-= context를 보고 다음 답변 또는 tool call을 만드는 모델
-
-Agent harness
-= context 조립, tool 실행, memory 검색, 권한 검사, hook 실행을 담당하는 런타임
-
-AGENTS.md
-= 세션 시작 때 로드되는 지속 지시문
-
-Skill
-= 필요할 때 읽히는 작업 매뉴얼
-
-Hook
-= lifecycle 이벤트마다 실행되는 자동 장치
-
-Plugin
-= skills/hooks/MCP/assets를 설치 가능한 단위로 묶은 패키지
+LLM = context를 보고 다음 답변 또는 tool call을 만드는 모델
+Agent harness = context 조립, tool 실행, memory 검색, 권한 검사, hook 실행을 담당하는 런타임
 ```
 
-## 프로젝트 상태
+## 강의 목차
 
-현재는 학습 노트 repo다. 아직 배포용 plugin 코드는 없다.
+1. [LLM은 기억하는 것이 아니라 context를 읽는다](docs/01-llm-is-context.md)  
+   모델을 `model(context) -> output`으로 보는 기초. “기억처럼 보이는 것”의 정체.
 
-나중에 커지면 이런 구조로 확장한다.
+2. [에이전트는 모델이 아니라 runtime이다](docs/02-agent-is-runtime.md)  
+   tool call, tool runner, observation 재주입, permission layer.
+
+3. [Context assembly: 답변 전 실제로 무슨 일이 일어나는가](docs/03-context-assembly.md)  
+   한 번의 질문에 system/developer/user/history/tool/schema/memory가 어떻게 붙는지.
+
+4. [Codex 지시문 표면: AGENTS.md, Skills, Hooks, Plugins](docs/04-codex-surfaces.md)  
+   왜 지시문 넣는 방법이 여러 개인지, 각각 언제 써야 하는지.
+
+5. [Hooks lifecycle: 대화 주기에 코드를 꽂는다는 것](docs/05-hooks-lifecycle.md)  
+   SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, trust/review.
+
+6. [Case study: Ponytail은 왜 강하게 작동하는가](docs/06-case-study-ponytail.md)  
+   manifest, hook 등록, mode tracker, 상태 파일, additionalContext.
+
+7. [Case study: Caveman은 왜 Hooks에 안 떴나](docs/07-case-study-caveman.md)  
+   코드 존재와 runtime discovery의 차이.
+
+8. [Memory design: 모델이 기억하는 게 아니라 하네스가 가져온다](docs/08-memory-design.md)  
+   recent history, summary, retrieval, stale memory, source discipline.
+
+9. [Tool design: 모델에게 함수를 맡기는 법](docs/09-tool-design.md)  
+   tool schema는 모델을 위한 API 문서다.
+
+10. [나만의 agent harness 설계하기](docs/10-building-harness-lab.md)  
+    개발 목록이 아니라 질문/가설/관찰 중심의 실험 설계.
+
+## Labs
+
+실험 코드는 나중에 [labs/](labs/README.md)에 둔다. 각 lab은 다음 형식으로 기록한다.
 
 ```text
-docs/          학습 문서
-experiments/   작은 hook/skill 실험
-plugins/       직접 만든 Codex plugin
-examples/      예제 입력/출력
+질문
+가설
+최소 구현
+관찰
+배운 점
+다음 질문
 ```
 
 ## 주요 공식 문서
