@@ -9,6 +9,10 @@ Caveman과 Ponytail로 배우는 Codex 에이전트 구조.
 - [집필 계획 / 리라이트 체크리스트](docs/00-writing-plan.md)
 - [레거시 문서: 2026-06-25 개편 전 버전](legacy/2026-06-25-pre-course-rewrite/README.md)
 
+## 새 원고
+
+1. [모델은 왜 기억하는 것처럼 보일까?](docs/01-model-memory-context.md)
+
 ## 현재 상태
 
 ```text

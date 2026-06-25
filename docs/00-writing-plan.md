@@ -77,7 +77,7 @@ Hook은 lifecycle event마다 실행되는 command다.
 
 아래 목차는 “개발 목록”이 아니라 “개념이 쌓이는 순서”다.
 
-- [ ] 01. 모델은 왜 기억하는 것처럼 보일까?
+- [x] 01. 모델은 왜 기억하는 것처럼 보일까?
   - 기존 `LLM은 기억하는 것이 아니라 context를 읽는다`를 개론서 스타일로 리라이트한다.
   - stateless API, cookie/session, DB lookup 비유를 넣는다.
   - 사용자의 Telegram + Node LLM 서버 경험을 예시로 사용한다.
