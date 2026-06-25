@@ -1,28 +1,7 @@
-# Labs
-
 [← README](../README.md)
+
+# Labs
 
 실험 코드는 아직 없다.
 
-각 lab은 완성품보다 관찰을 남기는 것이 목적이다.
-
-## 기록 형식
-
-```text
-질문
-가설
-최소 구현
-관찰
-배운 점
-다음 질문
-```
-
-## 예정된 lab
-
-```text
-01-context-inspector
-02-hook-playground
-03-mini-mode-plugin
-04-memory-harness
-05-skill-authoring-lab
-```
+새 개론서의 본문을 먼저 정리한 뒤, 각 장에서 필요한 실험만 추가한다.
