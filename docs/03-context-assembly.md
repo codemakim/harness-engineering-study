@@ -89,7 +89,7 @@ Context assembly는 모델 호출 전에 하네스가 모델에게 보여줄 상
 
 반드시 하나의 긴 문자열일 필요는 없다. 구현에 따라 역할이 구분된 메시지 배열, tool schema, tool output, conversation state, 환경 메타데이터, 압축 요약, 캐시된 prefix 같은 구조가 섞일 수 있다.
 
-개념적으로는 이런 흐름이다.
+개념적으로는 이런 흐름이다. 아래 순서는 실제 구현 순서를 엄밀히 나타낸 것이 아니라, 모델 호출 전에 어떤 종류의 정보가 모델 가시 상태에 참여할 수 있는지를 보여주는 개념적 흐름이다. 실제 runtime에서는 일부 layer가 별도 필드, 서버 측 conversation state, 캐시된 prefix, 세션 초기화 결과, tool result item 등으로 관리될 수 있다.
 
 ```text
 사용자 입력
@@ -127,6 +127,8 @@ Context assembly는 모델 호출 전에 하네스가 모델에게 보여줄 상
 ### 2. Developer instruction
 
 제품이나 실행 환경이 모델에게 주는 작업 방식이다.
+
+여기서 system instruction과 developer instruction은 OpenAI API의 역할 구분과 제품 내부 instruction layer를 설명하기 위한 개념적 분류다. Codex 같은 제품에서는 `AGENTS.md`, hook output, 설정값, 권한 정책 등이 내부 instruction chain과 결합되어 모델 행동에 영향을 줄 수 있다.
 
 예:
 
@@ -169,6 +171,8 @@ workspace root
 
 이런 값은 모델이 상대 경로, 날짜 표현, shell 명령을 해석하는 데 도움을 준다.
 
+다만 environment context가 보인다고 해서 모델이 실제로 모든 파일을 읽거나 shell을 실행할 수 있다는 뜻은 아니다. 실제 접근 가능 여부는 별도의 permission, sandbox, runtime 정책에 의해 제한된다.
+
 ### 6. Tool definitions
 
 모델이 호출할 수 있는 tool의 이름, 설명, input schema다.
@@ -191,17 +195,29 @@ git status
 
 Tool output은 모델이 외부 세계를 직접 본 것처럼 보이게 만든다. 하지만 실제로는 하네스가 실행한 결과가 다시 context에 들어온 것이다.
 
+Tool output도 품질 관리 대상이다. 권위 있는 사실처럼 보일 수 있지만 실제로는 tool runner가 반환한 데이터다. 실패, partial result, stale result, 권한 오류, stdout/stderr 잘림, schema mismatch 같은 상태를 하네스가 명시적으로 모델에게 전달해야 한다.
+
 ### 8. AGENTS.md guidance
 
-Codex는 `AGENTS.md` 계열 파일을 읽어 project/global guidance를 구성할 수 있다.
+Codex는 시작 시 instruction chain을 만들며 `AGENTS.md` 계열 파일을 읽어 project/global guidance를 구성할 수 있다.
 
-예:
+공식 문서 기준으로는 조금 더 구체적이다.
 
 ```text
-~/.codex/AGENTS.md
-repo root/AGENTS.md
-현재 작업 폴더 근처의 AGENTS.md
+Global scope
+→ Codex home의 AGENTS.override.md가 있으면 그것을 우선
+→ 없으면 AGENTS.md를 읽음
+
+Project scope
+→ project root에서 현재 working directory까지 내려오며 확인
+→ 각 directory에서 AGENTS.override.md, AGENTS.md, fallback instruction file 순서
+
+Merge order
+→ root에서 current directory 방향으로 이어 붙임
+→ 더 가까운 directory의 guidance가 뒤에 오므로 앞선 guidance를 덮는 효과를 낼 수 있음
 ```
+
+또한 combined guidance에는 크기 제한이 있다. 기본값은 32 KiB다.
 
 이 layer는 repo 규칙, 테스트 명령, 작업 방식 같은 “프로젝트 헌법”에 가깝다.
 
@@ -221,6 +237,8 @@ Loaded skill instructions
 → 선택된 skill의 실제 작업 지시문
 ```
 
+따라서 skill의 `description`은 단순 설명문이 아니다. 어떤 상황에서 이 skill을 선택할지 결정하는 retrieval/selection trigger 역할을 한다. 너무 넓거나 모호하면 잘못 선택될 수 있고, 너무 좁으면 필요한 상황에도 선택되지 않을 수 있다.
+
 ### 10. Hook output
 
 Hook은 lifecycle event에 실행되는 command다.
@@ -235,7 +253,9 @@ PostToolUse
 Stop
 ```
 
-Hook은 stdout을 통해 추가 context나 decision을 줄 수 있다. Ponytail처럼 SessionStart에서 mode instruction을 넣거나, UserPromptSubmit에서 mode 변경을 감지하는 구조가 여기에 해당한다.
+Hook output의 의미는 event마다 다르다. `SessionStart` 같은 hook의 stdout이나 `additionalContext`는 extra developer context로 들어갈 수 있다. 반면 `PreToolUse`에서는 plain text stdout이 context로 들어가지 않고, JSON 형태의 permission decision 등으로 tool 실행을 제어할 수 있다.
+
+Ponytail처럼 `SessionStart`에서 mode instruction을 넣거나, `UserPromptSubmit`에서 mode 변경을 감지하는 구조가 여기에 해당한다.
 
 ### 11. Memory
 
@@ -251,6 +271,8 @@ Memory는 모델 내부에 마법처럼 저장된 것이 아니라, 제품이나
 ```
 
 Memory는 강력하지만 조심해야 한다. 오래되었거나 충돌하는 memory가 들어가면 모델이 틀린 확신을 가질 수 있다.
+
+Memory retrieval은 단순 벡터 검색만 뜻하지 않는다. 제품에 따라 pinned memory, user profile, thread summary, semantic search, rule-based selection, 수동 저장 메모가 함께 사용될 수 있다. 중요한 것은 저장 위치보다 “어떤 정책으로 현재 turn에 주입되는가”다.
 
 ## 작은 예시: “3장 써줘” 요청이 처리되는 방식
 
@@ -346,6 +368,8 @@ MCP / connectors / tools
 
 이 구분을 유지하면 과장하지 않으면서도 agent harness를 잘 이해할 수 있다.
 
+Plugin 자체가 항상 모델 context에 직접 들어가는 것은 아니다. Plugin은 skills, hooks, MCP 설정, assets 등을 설치·배포하는 단위다. 실제 context assembly에는 그 plugin이 제공한 skill description, loaded `SKILL.md`, hook output, MCP tool definition 등이 참여한다.
+
 ## 웹 개발자 비유: request lifecycle
 
 웹 서버에서 request는 controller로 바로 떨어지지 않는다.
@@ -430,8 +454,11 @@ freshness
 provenance
 → 어디서 온 정보인지
 
+priority
+→ 어떤 layer를 더 신뢰할지
+
 conflict
-→ 충돌하면 무엇을 우선할지
+→ 충돌하면 어떻게 표시하거나 해결할지
 
 budgeting
 → 토큰 예산을 어떻게 나눌지
@@ -492,7 +519,7 @@ tool result가 불충분함
 3. context는 단순 문자열이 아니라 모델의 출력을 조건화하는 모델 가시 상태 전체다.
 4. Codex의 AGENTS.md, Skills, Hooks, Plugins는 context assembly에 참여하는 확인 가능한 표면이다.
 5. 최종 내부 payload와 모든 orchestration은 제품 표면에 따라 다를 수 있으므로, 확인 가능한 표면과 개념 모델을 구분해야 한다.
-6. 좋은 context assembly는 많이 넣는 것이 아니라 필요한 정보를 고르고, 배치하고, 압축하고, 출처와 최신성을 관리하는 것이다.
+6. 좋은 context assembly는 많이 넣는 것이 아니라 필요한 정보를 고르고, 배치하고, 압축하고, 출처·최신성·우선순위를 관리하는 것이다.
 ```
 
 ## 생각해볼 질문
