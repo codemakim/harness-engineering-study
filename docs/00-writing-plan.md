@@ -88,7 +88,7 @@ Hook은 lifecycle event마다 실행되는 command다.
   - “모델은 판단하고, 하네스는 실행한다”를 중심 문장으로 둔다.
   - Express/Nest 서버, middleware, worker, permission layer 비유를 사용한다.
 
-- [ ] 03. Context assembly: 답변 전 실제로 무슨 일이 일어나는가
+- [x] 03. Context assembly: 답변 전 실제로 무슨 일이 일어나는가
   - 사용자가 보는 질문 본문 외에 어떤 layer가 모델 입력에 들어갈 수 있는지 설명한다.
   - system/developer/user/history/environment/tool schema/skill/AGENTS/hook/memory/tool output을 정리한다.
   - 공식 문서로 확인 가능한 부분과 내부 구현이라 개념적으로 설명하는 부분을 구분한다.
