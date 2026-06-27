@@ -83,7 +83,7 @@ Hook은 lifecycle event마다 실행되는 command다.
   - 사용자의 Telegram + Node LLM 서버 경험을 예시로 사용한다.
   - “기억처럼 보이는 것 = context에 들어온 정보”를 반복해서 각인한다.
 
-- [ ] 02. 에이전트는 모델이 아니라 runtime이다
+- [x] 02. 에이전트는 모델이 아니라 runtime이다
   - tool call, tool runner, observation 재주입을 설명한다.
   - “모델은 판단하고, 하네스는 실행한다”를 중심 문장으로 둔다.
   - Express/Nest 서버, middleware, worker, permission layer 비유를 사용한다.

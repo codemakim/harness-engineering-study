@@ -12,6 +12,7 @@ Caveman과 Ponytail로 배우는 Codex 에이전트 구조.
 ## 새 원고
 
 1. [모델은 왜 기억하는 것처럼 보일까?](docs/01-model-memory-context.md)
+2. [에이전트는 왜 모델 하나가 아닐까?](docs/02-agent-runtime.md)
 
 ## 현재 상태
 
