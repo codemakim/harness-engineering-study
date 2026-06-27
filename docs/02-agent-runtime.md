@@ -18,6 +18,17 @@ LLM = context를 보고 다음 답변 또는 tool call을 만드는 모델
 Agent = LLM + runtime
 ```
 
+여기서 agent는 철학적·학술적으로 엄밀한 정의가 아니다. 업계에서도 어떤 사람은 tool을 쓰는 chatbot을 agent라고 부르고, 어떤 사람은 장기 목표, 계획, 자율 루프, 환경 조작까지 있어야 agent라고 부른다.
+
+이 책에서는 하네스 엔지니어링 관점의 실용적 정의를 쓴다.
+
+```text
+Agent
+= LLM이 다음 행동 후보를 만들고,
+  runtime이 context 조립, tool 실행, 권한 확인,
+  상태 관리, 결과 재주입을 담당하는 시스템
+```
+
 이 장의 중심 문장은 이것이다.
 
 ```text
@@ -25,6 +36,8 @@ Agent = LLM + runtime
 ```
 
 모델은 파일을 직접 읽지 않는다. shell을 직접 실행하지 않는다. 캘린더에 직접 일정을 만들지 않는다. 모델은 “이 도구를 이런 입력으로 호출하면 좋겠다”는 요청을 만들고, 실제 실행은 하네스가 한다.
+
+일반적인 function calling에서는 그렇다. built-in tool처럼 플랫폼이 실행을 맡는 경우도 있지만, 그때도 실행 주체는 모델 파라미터 자체가 아니라 모델 바깥의 runtime/tool layer다.
 
 이 구분을 이해하면 “AI agent를 만든다”는 말이 훨씬 선명해진다.
 
@@ -50,7 +63,7 @@ Agent
 이 repo에서 README를 읽고 요약해줘.
 ```
 
-단순 chatbot은 이렇게 답할 수밖에 없다.
+파일 내용이 context에 없고, 파일 읽기 tool이나 retrieval도 붙지 않은 순수 응답형 chatbot이라면 이렇게 답할 수밖에 없다.
 
 ```text
 파일 내용을 볼 수 없어서 요약할 수 없습니다.
@@ -73,7 +86,7 @@ Agent
 하네스가 tool call을 “실행”한다.
 ```
 
-모델은 실행자가 아니라 판단자다.
+모델은 실행자가 아니라 다음 행동 후보를 제안하는 판단자다. 그리고 그 판단 자체도 검증 대상이다. 실제 실행 여부는 하네스의 schema validation, 권한, 정책, 사용자 승인, timeout, 비용 예산 같은 기준으로 결정된다.
 
 ## 정확한 개념: agentic loop
 
@@ -92,7 +105,7 @@ Agent runtime은 보통 반복 루프를 가진다.
 
 이 반복을 agentic loop라고 부를 수 있다.
 
-아주 단순한 의사코드로 쓰면 이렇다.
+개념만 보이기 위해 중단 조건을 생략하면, 아주 단순한 의사코드는 이렇다.
 
 ```text
 messages = build_context(user_input)
@@ -109,7 +122,7 @@ while true:
         continue
 ```
 
-현실의 agent runtime은 이보다 훨씬 복잡하다. 권한, timeout, retry, streaming, tool schema validation, human approval, logging, cost budget, context compaction 같은 것이 붙는다.
+현실의 agent runtime은 이보다 훨씬 복잡하다. 보통 `max turns`, `max tool calls`, timeout, cancellation, approval pause, guardrail failure, retry, streaming, tool schema validation, human approval, logging, cost budget, context compaction 같은 것이 붙는다.
 
 하지만 뼈대는 단순하다.
 
@@ -192,8 +205,8 @@ calendar_create_event tool이 필요하다.
   "tool": "calendar_create_event",
   "arguments": {
     "title": "병원 예약 리마인드",
-    "date": "2026-06-28",
-    "time": "09:00",
+    "start_time": "2026-06-28T09:00:00+09:00",
+    "end_time": "2026-06-28T09:10:00+09:00",
     "timezone": "Asia/Seoul"
   }
 }
@@ -259,6 +272,8 @@ browser interaction
 connector 호출
 ```
 
+구체적인 tool 목록과 권한 모델은 Codex CLI, IDE extension, web, cloud task, connector 설정, 조직 정책에 따라 달라질 수 있다. 여기서는 Codex를 코딩 작업용 agent harness로 이해하기 위한 공통 구조만 본다.
+
 Codex 하네스는 실제로 tool을 실행한다. 그리고 결과를 다시 모델에게 준다.
 
 예:
@@ -311,6 +326,8 @@ tool 실행 완료
 
 Tool call은 요청이다. 실제 실행은 하네스가 맡는다.
 
+모델이 만든 tool arguments는 신뢰할 수 있는 실행 명령이 아니라 검증 대상 데이터다.
+
 하네스는 보통 다음을 확인한다.
 
 ```text
@@ -326,6 +343,8 @@ timeout이나 retry 정책은 무엇인가?
 이 구분이 있어야 안전한 agent를 만들 수 있다.
 
 모델에게 “삭제해”라는 판단을 맡길 수는 있어도, 실제 삭제를 무조건 실행하게 해서는 안 된다. 하네스가 권한과 안전장치를 가져야 한다.
+
+실행 결과를 부르는 용어도 문맥마다 조금 다르다. ReAct 계열 설명에서는 observation이라고 부르는 일이 많고, OpenAI API 문맥에서는 tool output, function call output, tool result 같은 표현을 쓴다. 이 책에서는 독자가 흐름을 이해하기 쉬운 쪽으로 병기한다.
 
 ## 흔한 오해
 
@@ -363,6 +382,7 @@ Agent 개발에서 중요한 것은 더 넓다.
 
 ```text
 context assembly
+state management
 tool design
 permission model
 runtime loop
@@ -418,11 +438,12 @@ final answer
 
 ```text
 1. Agent는 모델 하나가 아니라 LLM + runtime이다.
-2. 모델은 판단하고, 하네스는 실행한다.
-3. Tool call은 실행 완료가 아니라 실행 요청이다.
-4. 하네스는 tool validation, 권한 확인, 실행, 결과 재주입을 담당한다.
-5. Codex는 코딩 작업을 위한 agent harness로 볼 수 있다.
-6. Agent 개발은 프롬프트 작성이 아니라 runtime 설계다.
+2. 이 책에서 agent는 LLM이 행동 후보를 만들고 runtime이 실행·검증·상태 관리를 맡는 시스템을 뜻한다.
+3. 모델은 실행자가 아니라 행동 후보를 제안하는 판단자이며, 그 판단도 검증 대상이다.
+4. Tool call은 실행 완료가 아니라 실행 요청이다.
+5. 하네스는 tool validation, 권한 확인, 실행, 결과 재주입을 담당한다.
+6. Codex는 코딩 작업을 위한 agent harness로 볼 수 있다. 단, 구체적인 tool과 권한은 제품 표면과 설정에 따라 달라진다.
+7. Agent 개발은 프롬프트 작성이 아니라 runtime 설계다.
 ```
 
 ## 생각해볼 질문
