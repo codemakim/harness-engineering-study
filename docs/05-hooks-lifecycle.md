@@ -110,6 +110,8 @@ python3 ~/.codex/hooks/session_start.py를 실행한다.
 
 Hook은 event마다 쓰임이 다르다.
 
+이 장에서는 입문자가 가장 자주 마주치는 주요 event만 먼저 다룬다. 공식 hook 체계에는 이 밖에도 `PermissionRequest`, `PreCompact`, `PostCompact`, `SubagentStart`, `SubagentStop` 같은 event도 있다. compact, approval, subagent를 다룰 때는 각 event의 별도 contract를 확인해야 한다.
+
 ### SessionStart
 
 세션 시작, 재개, clear, compact 이후처럼 thread/subagent 시작 범위에서 실행된다.
@@ -141,6 +143,8 @@ prompt logging
 
 단, 이 event의 matcher는 지원되지 않거나 무시될 수 있다. 즉 UserPromptSubmit은 “prompt 내용에 따라 matcher로 나눠 실행”하기보다, hook command 안에서 입력을 직접 읽고 판단하는 쪽으로 생각하는 게 안전하다.
 
+출력 의미도 조심해야 한다. `UserPromptSubmit`에서 plain text stdout은 extra developer context로 들어갈 수 있고, JSON output의 `additionalContext`도 extra developer context로 들어갈 수 있다. 반대로 `decision: "block"`이나 exit code 2 + stderr는 prompt 제출을 막는 쪽으로 동작할 수 있다.
+
 ### PreToolUse
 
 Tool 실행 전에 실행된다.
@@ -162,6 +166,8 @@ PreToolUse hook은 guardrail이지 완전한 보안 경계가 아니다.
 
 실제 보안은 sandbox, permission, managed config, 외부 API 권한, CI policy와 함께 설계해야 한다. Hook만으로 모든 실행 경로를 완전히 막는다고 생각하면 위험하다.
 
+`PreToolUse`에서 plain text stdout은 모델 context로 들어가지 않고 무시된다. 제어가 필요하면 JSON output을 써야 한다. 예를 들어 `permissionDecision: "deny"`는 지원되는 tool call을 거부할 수 있고, `additionalContext`는 모델이 볼 수 있는 context를 추가할 수 있으며, `permissionDecision: "allow"`와 `updatedInput` 조합은 지원되는 tool input을 rewrite할 수 있다.
+
 ### PostToolUse
 
 Tool 실행 후 실행된다.
@@ -178,6 +184,8 @@ audit trail 기록
 
 PostToolUse는 이미 실행된 뒤다. 그래서 “막기”보다는 “검사, 기록, 후속 조치”에 가깝다.
 
+이 event에서도 plain text stdout은 무시된다. JSON output의 `additionalContext`는 extra developer context를 추가할 수 있다. `decision: "block"`은 이미 실행된 tool을 되돌리지 않는다. 대신 원래 tool result를 hook feedback으로 대체하고, 그 feedback을 바탕으로 다음 진행을 하게 만든다고 보는 편이 정확하다.
+
 ### Stop
 
 Turn 종료 시점에 실행된다.
@@ -192,6 +200,8 @@ thread 종료 전 상태 기록
 ```
 
 Stop hook은 편리하지만, turn 종료마다 실행될 수 있으므로 무겁거나 느린 작업을 넣으면 UX를 망칠 수 있다.
+
+`Stop`에서는 matcher가 사용되지 않는다. 또 exit 0으로 끝나는 plain text stdout은 유효한 응답 형식이 아니고 JSON stdout을 기대한다. 여기서 `decision: "block"`은 “이번 turn을 거부한다”는 뜻이 아니라, continuation prompt를 만들어 Codex가 계속 진행하게 하는 신호에 가깝다.
 
 ## Hook output은 event마다 의미가 다르다
 
@@ -212,15 +222,25 @@ SessionStart
 → plain text stdout이나 additionalContext가 extra developer context로 들어갈 수 있음
 
 UserPromptSubmit
-→ JSON output으로 additionalContext나 decision을 줄 수 있음
+→ plain text stdout은 extra developer context로 들어갈 수 있음
+→ JSON output의 additionalContext도 extra developer context로 들어갈 수 있음
+→ decision: "block" 또는 exit code 2 + stderr로 prompt를 막을 수 있음
 
 PreToolUse
-→ plain text stdout은 context로 들어가지 않음
-→ JSON decision으로 tool 실행을 제어할 수 있음
+→ plain text stdout은 무시됨
+→ JSON permissionDecision으로 supported tool call을 deny할 수 있음
+→ additionalContext로 model-visible context를 추가할 수 있음
+→ permissionDecision: "allow" + updatedInput으로 supported tool input을 rewrite할 수 있음
 
 PostToolUse
-→ 결과 검사나 logging에 적합
-→ event contract에 따라 output 의미가 달라짐
+→ plain text stdout은 무시됨
+→ additionalContext를 추가할 수 있음
+→ decision: "block"은 이미 실행된 tool을 되돌리지 않고 원래 tool result를 hook feedback으로 대체함
+
+Stop
+→ matcher는 사용되지 않음
+→ exit 0일 때 plain text stdout은 invalid이고 JSON stdout을 기대함
+→ decision: "block"은 turn 거부가 아니라 continuation prompt를 만들어 Codex를 계속 진행시킴
 ```
 
 즉 Hook을 만들 때는 반드시 “이 event에서 stdout이 context인가, decision인가, 단순 output인가?”를 확인해야 한다.
@@ -348,6 +368,8 @@ plugin의 기본 hooks/hooks.json
 
 여러 hook source가 있으면 matching hook들이 함께 실행될 수 있다. 같은 event에 여러 command hook이 있으면 병렬로 시작될 수 있으므로, 한 hook이 다른 hook 실행 자체를 막는다고 가정하면 안 된다.
 
+프로젝트 안의 `.codex/` layer에 있는 hook은 그 project layer가 trusted일 때만 project-local hook으로 로드된다. 신뢰되지 않은 project에서는 user/system hook은 적용될 수 있어도 project-local hook은 제외될 수 있다.
+
 Plugin-bundled hook도 같은 trust/review 흐름을 따른다.
 
 ## Trust/review는 왜 필요한가
@@ -376,6 +398,8 @@ hook 발견
 → 현재 hook hash 기준으로 신뢰 저장
 → hook 내용이 바뀌면 다시 review 필요
 ```
+
+system, MDM, cloud, `requirements.toml` 같은 managed source에서 내려오는 hook은 정책상 trusted로 취급되며, 일반 hook browser에서 사용자가 임의로 disable하는 대상이 아니다.
 
 이 모델은 귀찮은 절차가 아니라 보안 모델이다.
 
@@ -467,8 +491,10 @@ Hook은 command 실행이므로 비용이 있다.
 실패할 수 있음
 trust/review 관리가 필요함
 디버깅이 어려워질 수 있음
-hook끼리 순서 의존이 생길 수 있음
+같은 event의 hook은 병렬 실행될 수 있으므로 실행 순서에 의존하면 깨지기 쉬움
 ```
+
+또한 hook에는 timeout이 있다. timeout을 생략하면 기본값은 600초다. 빠르게 끝나야 하는 hook에는 명시적으로 짧은 timeout을 두는 편이 좋다.
 
 정적 규칙은 `AGENTS.md`가 낫고, 특정 작업 절차는 Skill이 낫다. Hook은 실행이 필요한 경우에 쓴다.
 
