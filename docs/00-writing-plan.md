@@ -98,7 +98,7 @@ Hook은 lifecycle event마다 실행되는 command다.
   - AGENTS.md는 durable project guidance, Skill은 on-demand workflow, Hook은 lifecycle command, Plugin은 distribution unit으로 정리한다.
   - 각 표면의 “언제 써야 하는가”를 이유 중심으로 설명한다.
 
-- [ ] 05. Hooks lifecycle: 대화 주기에 코드를 꽂는다는 것
+- [x] 05. Hooks lifecycle: 대화 주기에 코드를 꽂는다는 것
   - SessionStart, UserPromptSubmit, PreToolUse, PostToolUse를 설명한다.
   - stdout이 context/decision으로 연결되는 원리를 설명한다.
   - trust/review가 보안 모델임을 설명한다.
