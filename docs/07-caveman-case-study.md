@@ -469,7 +469,7 @@ Caveman의 Codex plugin distribution은 skills를 노출한다.
 | 형태 | 모델에게 들어가는 방식 | 실행 코드 | 상태 유지 | 자동 강화 | UI 노출 |
 |---|---|---|---|---|---|
 | AGENTS.md Caveman | session/run instruction | 없음 | 없음 | 약함 | Hooks 아님 |
-| Skill Caveman | 선택 시 `SKILL.md` 로드 | 기본적으로 없음 | 없음 | 작업 단위 | Skills |
+| Skill Caveman | 선택 시 `SKILL.md` 로드 | 자동 lifecycle 실행은 없음, optional script 가능 | 없음 | 작업 단위 | Skills |
 | Hook Caveman | lifecycle hook output | 있음 | 가능 | 강함 | Hooks |
 | Plugin Caveman | surface 배포 단위 | manifest에 따라 다름 | manifest에 따라 다름 | manifest에 따라 다름 | capabilities/discovery에 따라 |
 
@@ -511,6 +511,8 @@ Drop filler, pleasantries, and hedging.
 Preserve exact technical terms, code, API names, commands.
 Stay active across turns.
 ```
+
+단, 여기서 “across turns”는 instruction이 context에 남아 있는 동안 계속 따르라는 의미일 뿐이다. Hook처럼 상태 파일을 읽거나 매 prompt마다 reinforcement를 주입한다는 뜻은 아니다.
 
 이 방식은 instruction file 방식이다.
 
@@ -631,12 +633,7 @@ MCP/app 등이 선언됨
 
 아니다.
 
-Hook code가 있어도 Codex plugin manifest가 그 hook을 가리키지 않으면 plugin-bundled hook으로 실행되지 않는다.
-
-```text
-src/hooks/caveman-activate.js 있음
-≠ Codex SessionStart hook으로 등록됨
-```
+앞에서 본 것처럼 hook implementation은 가능성이고, hook registration은 manifest/config discovery path다. 코드 파일이 있어도 그 경로에 연결되지 않으면 lifecycle hook으로 실행되지 않는다.
 
 ### 오해 3. “Skill로 적용되는 것과 Hook으로 적용되는 것은 같다”
 
