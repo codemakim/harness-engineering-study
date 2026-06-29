@@ -93,7 +93,7 @@ Hook은 lifecycle event마다 실행되는 command다.
   - system/developer/user/history/environment/tool schema/skill/AGENTS/hook/memory/tool output을 정리한다.
   - 공식 문서로 확인 가능한 부분과 내부 구현이라 개념적으로 설명하는 부분을 구분한다.
 
-- [ ] 04. Codex 지시문 표면: AGENTS.md, Skills, Hooks, Plugins
+- [x] 04. Codex 지시문 표면: AGENTS.md, Skills, Hooks, Plugins
   - 왜 지시문 넣는 방법이 여러 개인지 설명한다.
   - AGENTS.md는 durable project guidance, Skill은 on-demand workflow, Hook은 lifecycle command, Plugin은 distribution unit으로 정리한다.
   - 각 표면의 “언제 써야 하는가”를 이유 중심으로 설명한다.
