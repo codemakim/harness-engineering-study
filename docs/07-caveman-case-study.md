@@ -1,6 +1,6 @@
 [← README](../README.md)
 
-# 7장. Caveman은 왜 Hooks에 안 떴나?
+# 7장. Caveman으로 보는 surface와 adapter의 차이
 
 ## 이 장에서 배울 것
 
@@ -32,8 +32,38 @@ Caveman
 이 장의 중심 문장은 이것이다.
 
 ```text
-코드가 존재하는 것과,
-Codex runtime이 그 코드를 hook으로 발견하는 것은 다르다.
+하네스 엔지니어링에서 중요한 것은 파일이 있는지가 아니라,
+그 파일이 어떤 surface에 연결되어 언제 발견되고 언제 실행되는가다.
+```
+
+Caveman 사례의 핵심은 “왜 Hooks에 안 떴나?” 하나가 아니다. 더 중요한 질문은 이것이다.
+
+```text
+같은 Caveman behavior가
+AGENTS.md로 들어갈 때,
+Skill로 들어갈 때,
+Hook으로 들어갈 때,
+Plugin distribution으로 들어갈 때
+각각 무엇이 달라지는가?
+```
+
+이 차이를 보면 하네스의 본질이 보인다.
+
+```text
+Instruction text
+→ 모델에게 말하는 내용
+
+Discovery path
+→ runtime이 무엇을 발견하는가
+
+Execution path
+→ 실제 command가 언제 실행되는가
+
+State path
+→ 상태가 어디에 저장되고 누가 읽는가
+
+Output contract
+→ 실행 결과가 어떤 형식으로 context에 들어가는가
 ```
 
 웹 개발자로 치면 익숙한 이야기다.
@@ -97,6 +127,58 @@ plugin manifest가 hooks를 선언함
 ```
 
 Ponytail은 이 연결이 있었다. Caveman의 Codex plugin manifest에는 이 연결이 없었다.
+
+## 먼저 adapter로 보기
+
+Caveman 사례는 npm package와 framework adapter를 떠올리면 쉽다.
+
+어떤 package가 core logic을 제공한다고 해보자.
+
+```text
+@acme/auth-core
+```
+
+이 core package 안에는 token 검증 함수가 있다.
+
+```ts
+verifyToken(token)
+```
+
+하지만 이것만으로 Express middleware가 되지는 않는다.
+
+Express에서 쓰려면 Express adapter가 필요하다.
+
+```ts
+app.use(authExpressMiddleware())
+```
+
+Next.js middleware로 쓰려면 또 다른 adapter가 필요하다.
+
+```ts
+export function middleware(req) { ... }
+```
+
+같은 core logic이어도 runtime마다 연결 방식이 다르다.
+
+Caveman도 그렇다.
+
+```text
+core behavior
+→ caveman SKILL.md
+
+Claude Code plugin adapter
+→ .claude-plugin/plugin.json + src/hooks/*
+
+Codex skill distribution
+→ plugins/caveman/.codex-plugin/plugin.json + skills/*
+
+Codex lifecycle hook adapter
+→ 현재 manifest에는 없음
+```
+
+Ponytail은 Codex lifecycle adapter가 연결된 사례다. Caveman은 현재 확인한 Codex distribution에서는 skill surface까지만 연결된 사례다.
+
+그래서 이 장은 “Caveman hook 미노출 원인 분석”이라기보다 “같은 행동 규칙도 surface와 adapter에 따라 전혀 다른 harness가 된다”는 사례 분석이다.
 
 ## 실제 Caveman 설치본에서 확인한 구조
 
@@ -319,7 +401,7 @@ Caveman repository root에는 이런 파일도 있다.
 
 이유는 `.codex/hooks.json`이 “그 repository를 project로 열었을 때의 project-local Codex config”에 가깝기 때문이다.
 
-Codex가 현재 작업 중인 project root에서 `.codex/hooks.json`을 발견하면 project-local hook으로 볼 수 있다. 하지만 어떤 GitHub repository를 plugin으로 설치했다고 해서, 그 repository root의 `.codex/hooks.json`이 자동으로 “plugin-bundled hook”이 되는 것은 아니다.
+Codex가 현재 작업 중인 project root에서 `.codex/hooks.json`을 발견하면 project-local hook으로 볼 수 있다. 단, project-local hook으로 동작하려면 그 repository가 현재 Codex project로 열려 있어야 하고, project `.codex/` config layer가 trusted 상태여야 한다. 어떤 GitHub repository를 plugin으로 설치했다는 사실만으로, 그 repository root의 `.codex/hooks.json`이 자동으로 “plugin-bundled hook”이 되는 것은 아니다.
 
 Plugin-bundled hook으로 노출하려면 Codex plugin manifest가 hook file을 가리켜야 한다.
 
@@ -377,6 +459,45 @@ Hook discovery
 Caveman의 Codex plugin distribution은 skills를 노출한다.
 하지만 현재 Codex plugin manifest 기준으로 lifecycle hooks를 노출하지 않는다.
 ```
+
+## 같은 Caveman, 다른 surface
+
+이제 이 장의 큰 질문으로 돌아오자.
+
+같은 “Caveman처럼 짧고 정확하게 말하기”라는 behavior도 어떤 surface에 연결되느냐에 따라 완전히 다른 harness가 된다.
+
+| 형태 | 모델에게 들어가는 방식 | 실행 코드 | 상태 유지 | 자동 강화 | UI 노출 |
+|---|---|---|---|---|---|
+| AGENTS.md Caveman | session/run instruction | 없음 | 없음 | 약함 | Hooks 아님 |
+| Skill Caveman | 선택 시 `SKILL.md` 로드 | 기본적으로 없음 | 없음 | 작업 단위 | Skills |
+| Hook Caveman | lifecycle hook output | 있음 | 가능 | 강함 | Hooks |
+| Plugin Caveman | surface 배포 단위 | manifest에 따라 다름 | manifest에 따라 다름 | manifest에 따라 다름 | capabilities/discovery에 따라 |
+
+이 표가 중요한 이유는 결과만 보면 각 방식이 모두 비슷해 보일 수 있기 때문이다.
+
+```text
+AGENTS.md에 Caveman 규칙을 넣음
+→ 모델이 짧게 말할 수 있음
+
+Caveman skill을 사용함
+→ 모델이 짧게 말할 수 있음
+
+Caveman hook이 매 prompt마다 reinforcement를 넣음
+→ 모델이 짧게 말할 수 있음
+```
+
+하지만 하네스 관점에서는 다르다.
+
+```text
+무엇이 발견되는가?
+언제 로드되는가?
+코드가 실행되는가?
+상태를 저장하는가?
+다음 turn에서 다시 강화되는가?
+사용자가 UI에서 review/trust할 수 있는가?
+```
+
+이 질문에 대한 답이 surface마다 다르다.
 
 ## 그래서 AGENTS.md로 넣은 Caveman은 무엇이었나?
 
@@ -479,64 +600,8 @@ Caveman도 같은 수준의 Codex adapter가 필요하다.
 이것이 하네스 엔지니어링이다.
 
 ```text
-좋은 프롬프트를 쓰는 것
-< runtime surface에 맞게 배포하고 연결하는 것
-```
-
-## 웹 개발자 비유: npm package와 framework adapter
-
-Caveman 사례는 npm package와 비슷하다.
-
-어떤 package가 core logic을 제공한다고 해보자.
-
-```text
-@acme/auth-core
-```
-
-이 core package 안에는 token 검증 함수가 있다.
-
-```ts
-verifyToken(token)
-```
-
-하지만 Express에서 자동 middleware가 되지는 않는다.
-
-Express에서 쓰려면 adapter가 필요하다.
-
-```ts
-app.use(authExpressMiddleware())
-```
-
-Next.js middleware로 쓰려면 또 다른 adapter가 필요하다.
-
-```ts
-export function middleware(req) { ... }
-```
-
-같은 core logic이어도 runtime마다 연결 방식이 다르다.
-
-Caveman도 그렇다.
-
-```text
-core behavior
-→ caveman SKILL.md
-
-Claude Code plugin adapter
-→ .claude-plugin/plugin.json + src/hooks/*
-
-Codex skill distribution
-→ plugins/caveman/.codex-plugin/plugin.json + skills/*
-
-Codex lifecycle hook adapter
-→ 현재 manifest에는 없음
-```
-
-같은 repository 안에 여러 agent surface가 공존할 수 있다.
-
-그래서 “이 repo에는 hook이 있는데 왜 Codex Hooks에 안 떠?”라는 질문의 답은:
-
-```text
-그 hook이 Codex용 plugin surface에 연결되어 있지 않기 때문이다.
+좋은 프롬프트를 쓰는 것만으로는 부족하다.
+runtime surface에 맞게 배포하고 연결해야 한다.
 ```
 
 ## 흔한 오해
@@ -674,14 +739,14 @@ AX 개발자는 이 경로를 읽을 수 있어야 한다.
 ## 요약
 
 ```text
-1. Caveman이 Hooks에 안 뜬 이유는 hook 코드가 없어서가 아니다.
-2. 현재 Codex용 Caveman manifest에는 skills는 있지만 hooks 필드가 없다.
-3. Ponytail은 manifest가 hooks file을 가리켜 plugin-bundled hook으로 발견된다.
-4. Caveman repository에는 Claude용 hook manifest와 src/hooks 구현이 있다.
-5. 하지만 코드 존재와 Codex runtime discovery는 다르다.
-6. .codex/hooks.json은 project-local config 성격이지, 자동 plugin-bundled hook이 아니다.
-7. AGENTS.md Caveman, Skill Caveman, Hook Caveman은 서로 다른 표면이다.
-8. 하네스 엔지니어링의 핵심은 파일이 아니라 연결 경로를 보는 것이다.
+1. 같은 Caveman behavior도 AGENTS.md, Skill, Hook, Plugin surface에 따라 다르게 작동한다.
+2. 하네스 엔지니어링의 핵심은 파일 존재가 아니라 discovery path, execution path, state path, output contract다.
+3. 현재 Codex용 Caveman manifest에는 skills는 있지만 hooks 필드가 없다.
+4. 그래서 Caveman은 skill surface로는 발견되지만, plugin-bundled lifecycle hook으로는 발견되지 않는다.
+5. Caveman repository에는 Claude용 hook manifest와 src/hooks 구현이 있다.
+6. 하지만 Claude adapter, Codex skill adapter, Codex hook adapter는 같은 것이 아니다.
+7. .codex/hooks.json은 project-local config 성격이지, 자동 plugin-bundled hook이 아니다.
+8. Ponytail은 lifecycle에 연결된 behavior이고, Caveman은 현재 Codex distribution에서는 skill surface까지만 연결된 behavior다.
 ```
 
 ## 생각해볼 질문

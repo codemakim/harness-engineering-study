@@ -107,9 +107,10 @@ Hook은 lifecycle event마다 실행되는 command다.
   - manifest의 `hooks` 필드, SessionStart, UserPromptSubmit, 상태 파일, mode tracker를 설명한다.
   - 단순 프롬프트와 runtime mode의 차이를 보여준다.
 
-- [x] 07. Case study: Caveman은 왜 Hooks에 안 떴나
+- [x] 07. Case study: Caveman으로 보는 surface와 adapter의 차이
   - “코드 존재”와 “runtime discovery”는 다르다는 점을 중심으로 설명한다.
   - Codex plugin manifest에 hooks가 없어서 Settings > Hooks에 안 뜬다는 사례를 다룬다.
+  - AGENTS.md, Skill, Hook, Plugin surface가 같은 behavior를 어떻게 다르게 만드는지 설명한다.
 
 - [ ] 08. Memory design: 모델이 기억하는 게 아니라 하네스가 가져온다
   - recent history, summary, retrieval, stale memory, source discipline을 설명한다.
