@@ -29,7 +29,7 @@ AGENTS.md = durable project guidance
 Skill = on-demand workflow manual
 Hook = lifecycle command
 Plugin = distribution unit
-MCP/App = external capability
+MCP/App/Connector = external capability
 ```
 
 ## 먼저 직관으로 이해하기
@@ -78,7 +78,7 @@ repo 규칙은 AGENTS.md
 특정 작업 절차는 Skill
 이벤트마다 실행되어야 하는 검사는 Hook
 남에게 설치시킬 묶음은 Plugin
-외부 시스템 연결은 MCP/App
+외부 시스템 연결은 MCP/App/Connector
 ```
 
 표면이 많아 보이는 것은 복잡하게 만들기 위해서가 아니다. 서로 다른 수명과 역할을 섞지 않기 위해서다.
@@ -109,10 +109,10 @@ repo 규칙은 AGENTS.md
 |---|---|---|---|---|
 | Prompt | 현재 요청 | 지금 | 없음 | 없음 |
 | AGENTS.md | global/repo/folder | 세션 시작 instruction chain | 없음 | 파일 공유 |
-| Skill | repo/user/plugin | 필요할 때 선택 | 선택적으로 script 사용 가능 | skill/plugin |
+| Skill | repo/user/admin/system/plugin | 필요할 때 선택 | 선택적으로 script 사용 가능 | skill/plugin |
 | Hook | config/plugin layer | lifecycle event | command 실행 | config/plugin |
 | Plugin | 설치 단위 | 설치/활성화 후 | skills/hooks/MCP 제공 | 배포 단위 |
-| MCP/App | 외부 시스템 연결 | tool 필요 시 | 외부 tool 실행 | server/app |
+| MCP/App/Connector | 외부 capability 계열 | tool 필요 시 | 외부 tool 실행 | server/app/connector |
 
 이 표를 외울 필요는 없다. 중요한 감각은 이것이다.
 
@@ -126,7 +126,7 @@ repo 규칙은 AGENTS.md
 
 ## AGENTS.md: 프로젝트 헌법
 
-`AGENTS.md`는 Codex가 세션 시작 시 instruction chain에 넣는 durable guidance다.
+`AGENTS.md`는 Codex가 run마다, 그리고 TUI session 시작 시 instruction chain에 넣는 durable guidance다.
 
 좋은 용도:
 
@@ -170,6 +170,8 @@ Merge order
 → 가까운 directory의 guidance가 뒤에 오므로 더 구체적인 규칙처럼 작동
 ```
 
+Codex는 빈 instruction file을 건너뛰고, project instruction의 combined size가 `project_doc_max_bytes` 한도에 도달하면 더 이상 추가하지 않는다. 기본값은 32 KiB다.
+
 주의할 점:
 
 ```text
@@ -178,6 +180,8 @@ AGENTS.md는 항상 유효한 규칙을 담기에 좋다.
 ```
 
 세션 중간에 수정한 내용은 현재 실행 중인 세션에 바로 반영되지 않을 수 있다. 새 세션이나 재시작이 필요할 수 있다.
+
+또한 “프로젝트 헌법”이라는 비유는 repo 안에서의 기본 규칙이라는 뜻이다. 전체 instruction hierarchy에서 최상위라는 뜻은 아니다. `AGENTS.md`는 system/developer instruction, 제품 정책, permission model보다 우선하지 않는다.
 
 ## Skill: 필요할 때 꺼내는 작업 매뉴얼
 
@@ -222,6 +226,8 @@ Review the PR by checking:
 ```
 
 Skill은 “항상 지켜야 할 repo 규칙”보다 “특정 일을 할 때 꺼내는 절차서”에 가깝다.
+
+Skill은 기본적으로 instruction과 reference를 제공하는 workflow manual이다. Skill 폴더 안에 scripts를 둘 수 있지만, 그 script가 lifecycle event마다 자동 실행되는 것은 아니다. 모델이 절차를 따라 필요하다고 판단하거나 사용자가 명시적으로 요청했을 때 runtime tool을 통해 실행될 수 있다.
 
 ## Hook: lifecycle에 꽂는 command
 
@@ -271,6 +277,8 @@ Hook은 command를 실행할 수 있다. 그래서 trust/review가 필요하다.
 
 이 차이는 크다. Hook은 파일을 읽고, 상태를 쓰고, 외부 명령을 실행하고, 특정 tool 사용을 막을 수 있다. 그러므로 안전 모델과 승인 흐름이 필요하다.
 
+다만 hook은 guardrail이지 완전한 보안 경계가 아니다. 예를 들어 `PreToolUse` hook은 특정 tool 사용을 제어하는 데 도움이 되지만, 모든 실행 경로를 완전히 막는 최종 enforcement boundary로 보면 안 된다. 실제 보안 정책은 sandbox, permission, managed config, 외부 API 권한 제어와 함께 설계해야 한다.
+
 또한 hook output은 event마다 의미가 다르다.
 
 ```text
@@ -312,6 +320,8 @@ my-plugin/
 
 Hook이 있는 plugin이라면 manifest에서 hook 파일을 가리켜야 한다.
 
+아래는 구조를 보여주기 위한 단순화 예시다. 실제 plugin manifest의 필드와 설치 방식은 현재 Codex plugin 문서의 schema를 기준으로 확인해야 한다.
+
 ```json
 {
   "name": "my-plugin",
@@ -331,9 +341,19 @@ hook output, MCP tool definition 등이 context assembly에 참여한다.
 
 즉 plugin은 “context 조각”이라기보다 “context 조각과 실행 능력을 설치 가능하게 묶은 package”다.
 
-## MCP/App: 외부 세계로 나가는 통로
+## MCP/App/Connector: 외부 세계로 나가는 통로
 
-MCP나 App/Connector는 모델에게 외부 시스템을 tool로 연결하는 표면이다.
+MCP, App, Connector는 모두 외부 data/action을 Codex가 사용할 수 있는 capability로 연결한다는 점에서 같은 계열이다.
+
+다만 같은 개념은 아니다.
+
+```text
+MCP
+→ protocol/server 중심. 추가 tool이나 shared information을 제공하는 연결 방식.
+
+App/Connector
+→ 제품 통합, 인증, 권한 UX가 붙은 통합 표면에 가까움.
+```
 
 좋은 용도:
 
@@ -346,7 +366,7 @@ Google Drive 파일 읽기
 사내 API 호출
 ```
 
-MCP/App은 단순 instruction이 아니다. 외부 데이터와 외부 action을 연결한다.
+MCP/App/Connector는 단순 instruction이 아니다. 외부 데이터와 외부 action을 연결한다.
 
 ```text
 AGENTS.md
@@ -358,7 +378,7 @@ Skill
 Hook
 → “이 lifecycle event에 이 command를 실행해라”
 
-MCP/App
+MCP/App/Connector
 → “이 외부 시스템의 tool을 사용할 수 있다”
 ```
 
@@ -426,6 +446,8 @@ UserPromptSubmit
 
 대화 중 스타일이 자꾸 흐려진다면 hook이 더 강하다.
 
+다만 단순 스타일 선호만으로 Hook을 쓰는 것은 보통 과하다. Hook은 동적 상태 확인, 정책 차단, 로그 기록처럼 실행이 필요한 경우에 더 적합하다. 단순한 기본 응답 스타일은 prompt나 `AGENTS.md`를 먼저 고려한다.
+
 ### 6. 남들이 설치하게 만들고 싶다면 Plugin
 
 ```text
@@ -459,7 +481,7 @@ Hook
 Plugin
 → skills/hooks/MCP/assets를 설치 가능한 단위로 묶은 package
 
-MCP/App
+MCP/App/Connector
 → 외부 시스템의 data/action을 tool로 제공
 ```
 
@@ -562,7 +584,7 @@ Plugin은 배포 단위다. Plugin 안에 skill만 있을 수도 있고, hook만
 작업 매뉴얼 → Skill
 이벤트 실행 → Hook
 배포 묶음 → Plugin
-외부 연결 → MCP/App
+외부 연결 → MCP/App/Connector
 ```
 
 ## 왜 중요한가
@@ -585,6 +607,8 @@ Plugin은 배포 단위다. Plugin 안에 skill만 있을 수도 있고, hook만
 → 재사용과 공유가 어려움
 ```
 
+단, Hook도 최종 보안 경계는 아니다. 실제 차단이 필요한 정책은 permission model, sandbox, 외부 API 권한, CI policy와 함께 설계해야 한다.
+
 좋은 하네스 엔지니어링은 “무엇을 말할까”뿐 아니라 “그 말을 어느 표면에 둘까”를 설계한다.
 
 이 설계가 맞아야 뒤의 Ponytail/Caveman case study도 제대로 보인다.
@@ -605,7 +629,7 @@ AGENTS.md로 넣은 Caveman 규칙과 plugin hook은 왜 다른가?
 3. Skill은 필요할 때 선택되어 로드되는 workflow manual이다.
 4. Hook은 lifecycle event에 실행되는 command이며 trust/review가 필요하다.
 5. Plugin은 skills/hooks/MCP/assets를 설치 가능한 단위로 묶는 distribution unit이다.
-6. MCP/App은 외부 시스템의 data/action을 tool로 연결하는 표면이다.
+6. MCP/App/Connector는 외부 시스템의 data/action을 tool로 연결하는 capability 계열이다.
 7. 좋은 설계는 같은 내용을 무조건 한 파일에 넣지 않고, 수명과 역할에 맞는 표면에 둔다.
 ```
 
