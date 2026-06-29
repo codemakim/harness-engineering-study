@@ -27,7 +27,7 @@ Memory는 모델의 신비한 능력이 아니라,
 
 그 context 안에 과거 대화, 요약, 사용자 선호, 프로젝트 규칙, 검색된 문서, tool output이 들어 있으면 모델은 “기억하는 것처럼” 답한다.
 
-반대로 context에 없으면 모른다.
+반대로 사용자별·프로젝트별·현재 상태 정보가 context에 없고 tool로도 확인할 수 없다면, 모델은 그것을 안정적으로 알 수 없다.
 
 ## 먼저 직관으로 이해하기
 
@@ -311,6 +311,8 @@ source retrieval
 
 법, 가격, API spec, 보안 정책, 최신 제품 동작은 원본을 확인해야 한다.
 
+External source retrieval은 엄밀히 말하면 durable memory 자체라기보다 memory system이 함께 사용하는 source-of-truth retrieval layer다. 하지만 최종적으로 retrieved source snippet도 context assembly에 참여하므로 memory design과 함께 설계해야 한다.
+
 ## Memory pipeline: 저장보다 중요한 것은 선택
 
 memory system은 보통 이런 pipeline으로 생각할 수 있다.
@@ -556,6 +558,8 @@ Codex memory 파일은 Codex home 아래에 저장된다. 기본값은 `~/.codex
 
 이 파일들은 generated state다. 필요하면 문제 해결이나 공유 전 검토를 위해 볼 수 있지만, 수동 편집을 primary control surface로 삼는 것은 권장되지 않는다.
 
+Codex memory generation은 즉시 동기적으로 일어나는 저장 버튼이 아니다. 공식 문서 기준으로 Codex는 active 또는 short-lived session을 건너뛸 수 있고, thread가 충분히 idle해질 때까지 기다릴 수 있으며, rate limit이 낮으면 background memory generation을 스킵할 수 있다. generated memory fields에서는 secret을 redact하지만, Codex home이나 memory artifact를 공유하기 전에는 사용자가 직접 검토해야 한다.
+
 Codex에는 thread 단위 memory control도 있다. `/memories`를 통해 현재 thread가 기존 memory를 사용할지, 나중에 memory generation input으로 쓰일지 조절할 수 있다.
 
 이것도 하네스 관점에서는 자연스럽다.
@@ -579,6 +583,8 @@ context assembly
 Codex 문서에는 Chronicle도 나온다.
 
 Chronicle은 screen context를 이용해 memory를 보강하는 기능이다. macOS의 Screen Recording/Accessibility permission을 요구하고, 현재는 opt-in research preview로 설명된다.
+
+Chronicle의 세부 동작과 지원 범위는 research preview 상태와 제품 표면에 따라 달라질 수 있다. 여기서는 memory source가 thread를 넘어 screen context까지 확장될 수 있다는 설계 포인트만 본다.
 
 이 기능은 좋은 예시다.
 
@@ -640,6 +646,8 @@ async function buildContext(userPrompt: string, repoPath: string) {
 ```
 
 이 예시는 일부러 단순하다.
+
+실제 API나 제품에서는 memory가 반드시 독립된 chat message로 들어가는 것은 아니다. developer context, retrieved context block, tool output, server-side conversation state, compressed summary 등 여러 형태로 들어갈 수 있다. 여기서는 개념을 보여주기 위해 `messages` 배열처럼 표현했다.
 
 실제 시스템에서는 더 많은 판단이 필요하다.
 
@@ -781,7 +789,7 @@ Memory design을 이해하면 agent가 훨씬 덜 신비롭게 보인다.
 5. 좋은 memory는 stable preference, recurring workflow, project convention, known pitfall이다.
 6. 나쁜 memory는 stale fact, secret, 일회성 상태, 검증 안 된 추측이다.
 7. AGENTS.md는 team-visible durable guidance이고, Memory는 local recall layer다.
-8. 중요한 정보일수록 memory보다 source를 확인해야 한다.
+8. Memory는 source of truth를 대체하지 않는다. 중요한 정보일수록 memory보다 source를 확인해야 한다.
 ```
 
 ## 생각해볼 질문
