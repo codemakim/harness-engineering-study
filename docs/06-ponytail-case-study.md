@@ -99,6 +99,8 @@ SubagentStart
 /Users/jhkim/.codex/plugins/cache/ponytail/ponytail/4.8.3/
 ```
 
+따라서 아래의 파일 경로와 코드 조각은 Ponytail `4.8.3` 현재 설치본 기준이다. Ponytail 버전이나 Codex plugin schema가 바뀌면 파일명, manifest 필드, hook output shape은 달라질 수 있다.
+
 핵심 파일은 많지 않다.
 
 ```text
@@ -158,6 +160,8 @@ Ponytail의 Codex plugin manifest에는 이런 필드가 있다.
 ```
 
 Codex는 plugin을 설치할 때 manifest를 보고 이 plugin이 어떤 capability를 제공하는지 알 수 있다. `skills`가 있으면 skill 목록에 들어갈 수 있고, `hooks`가 있으면 hook definition을 발견할 수 있다.
+
+다만 manifest의 세부 필드와 `interface.capabilities` 같은 표시용 metadata는 plugin schema와 버전에 따라 달라질 수 있다. 여기서는 Ponytail `4.8.3` 설치본에서 확인한 manifest를 사례로 보는 것이 안전하다.
 
 그래서 Ponytail은 Settings > Hooks에 나타난다.
 
@@ -330,6 +334,8 @@ stop ponytail
 
 이 기능은 모델이 “알아서 기억”하는 것이 아니다. `UserPromptSubmit` hook에서 `ponytail-mode-tracker.js`가 stdin으로 들어온 prompt를 읽고 직접 파싱한다.
 
+이 설계는 `UserPromptSubmit`의 event contract와도 잘 맞는다. 5장에서 본 것처럼 `UserPromptSubmit`은 matcher가 사용되지 않는다. 그래서 Ponytail도 matcher로 `/ponytail` prompt만 고르는 대신, command 내부에서 prompt JSON을 직접 읽고 필요한 경우만 처리한다.
+
 핵심 흐름은 이렇다.
 
 ```text
@@ -396,7 +402,7 @@ SessionStart context is parent-thread only and never reaches subagents,
 so without this every Task-spawned agent runs ponytail-unaware.
 ```
 
-즉 부모 thread에서 SessionStart로 들어간 Ponytail instruction이 subagent에게 자동으로 전달된다고 가정하면 안 된다.
+즉 부모 thread에서 SessionStart로 들어간 Ponytail instruction이 subagent에게 자동으로 전달된다고 가정하면 안 된다. 이 말은 모든 부모 context가 어떤 경우에도 subagent로 전달되지 않는다는 일반 법칙이 아니다. Ponytail 관점에서는 SessionStart에서 주입한 mode instruction이 subagent에 자동 보장되지 않으므로, `SubagentStart`에서 다시 주입하는 설계가 필요하다는 뜻이다.
 
 그래서 `ponytail-subagent.js`는 상태 파일을 읽는다.
 
@@ -506,9 +512,9 @@ Only then: the minimum code that works.
 한 줄로 되는가?
 ```
 
-이것은 output style이 아니라 search policy에 가깝다.
+이것은 output style이 아니라 decision checklist에 가깝다.
 
-모델이 solution space를 탐색하는 순서를 바꾼다.
+여기서 checklist라는 말은 모델 내부 알고리즘을 바꾼다는 뜻이 아니다. Ponytail instruction이 solution space를 평가할 때 우선적으로 고려할 기준과 선호도를 context로 주입한다는 뜻이다.
 
 ```text
 기본 모델:
@@ -519,7 +525,7 @@ Ponytail mode:
 → stdlib/native 확인 → 최소 구현 → 짧은 설명
 ```
 
-그래서 Ponytail은 코드량을 줄이는 효과가 있다. 하지만 “무조건 대충”은 아니다.
+그래서 Ponytail은 코드량을 줄이는 방향으로 모델을 강하게 유도한다. 다만 이것은 수학적으로 보장되는 결과라기보다, instruction과 lifecycle 주입이 만든 행동 경향이다. 그리고 “무조건 대충”도 아니다.
 
 `SKILL.md`에는 Lazy가 금지되는 영역도 명시되어 있다.
 
@@ -737,7 +743,7 @@ process.stdin.on('end', () => {
 });
 ```
 
-이 예시는 완전한 제품이 아니다. 하지만 Ponytail의 핵심 골격은 보인다.
+이 예시는 완전한 제품이 아니다. 실제로 배포하려면 `PLUGIN_DATA` 기반 상태 경로, JSON parse 실패 처리, mode off 처리, `SubagentStart` 재주입, Windows command, hook trust/review까지 고려해야 한다. 하지만 Ponytail의 핵심 골격은 보인다.
 
 ```text
 manifest가 hook을 노출한다.
@@ -894,4 +900,3 @@ Ponytail이 단순 프롬프트보다 강하게 작동하는 이유는 문구가
 3. 상태가 필요한가? 필요하다면 모델 memory가 아니라 어디에 저장할 것인가?
 4. subagent나 background task처럼 context boundary가 생기면 같은 규칙을 어떻게 전달할 것인가?
 5. Hook으로 넣을 것과 AGENTS.md에 둘 것을 어떤 기준으로 나눌 것인가?
-
