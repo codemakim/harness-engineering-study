@@ -103,7 +103,7 @@ Hook은 lifecycle event마다 실행되는 command다.
   - stdout이 context/decision으로 연결되는 원리를 설명한다.
   - trust/review가 보안 모델임을 설명한다.
 
-- [ ] 06. Case study: Ponytail은 왜 강하게 작동하는가
+- [x] 06. Case study: Ponytail은 왜 강하게 작동하는가
   - manifest의 `hooks` 필드, SessionStart, UserPromptSubmit, 상태 파일, mode tracker를 설명한다.
   - 단순 프롬프트와 runtime mode의 차이를 보여준다.
 

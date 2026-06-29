@@ -16,6 +16,7 @@ Caveman과 Ponytail로 배우는 Codex 에이전트 구조.
 3. [답변 전 실제로 무슨 일이 일어날까?](docs/03-context-assembly.md)
 4. [왜 지시문 넣는 방법이 이렇게 많을까?](docs/04-codex-surfaces.md)
 5. [Hook은 왜 lifecycle에 꽂히는가?](docs/05-hooks-lifecycle.md)
+6. [Ponytail은 왜 강하게 작동하는가?](docs/06-ponytail-case-study.md)
 
 ## 현재 상태
 
