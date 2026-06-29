@@ -18,6 +18,7 @@ Caveman과 Ponytail로 배우는 Codex 에이전트 구조.
 5. [Hook은 왜 lifecycle에 꽂히는가?](docs/05-hooks-lifecycle.md)
 6. [Ponytail은 왜 강하게 작동하는가?](docs/06-ponytail-case-study.md)
 7. [Caveman으로 보는 surface와 adapter의 차이](docs/07-caveman-case-study.md)
+8. [Memory design: 모델이 기억하는 게 아니라 하네스가 가져온다](docs/08-memory-design.md)
 
 ## 현재 상태
 

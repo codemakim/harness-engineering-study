@@ -112,7 +112,7 @@ Hook은 lifecycle event마다 실행되는 command다.
   - Codex plugin manifest에 hooks가 없어서 Settings > Hooks에 안 뜬다는 사례를 다룬다.
   - AGENTS.md, Skill, Hook, Plugin surface가 같은 behavior를 어떻게 다르게 만드는지 설명한다.
 
-- [ ] 08. Memory design: 모델이 기억하는 게 아니라 하네스가 가져온다
+- [x] 08. Memory design: 모델이 기억하는 게 아니라 하네스가 가져온다
   - recent history, summary, retrieval, stale memory, source discipline을 설명한다.
   - memory를 session/cache/DB search/ranking 문제로 비유한다.
 
