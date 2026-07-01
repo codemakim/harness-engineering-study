@@ -157,7 +157,7 @@ Safety boundary
   - false positive / false negative, destructive action safety, approval boundary, observation quality를 설명한다.
   - 웹 개발자의 테스트 피라미드, 회귀 테스트, 로그 기반 운영과 연결한다.
 
-- [ ] 12. Safety boundary: 모델을 믿지 말고 경계를 설계하라
+- [x] 12. Safety boundary: 모델을 믿지 말고 경계를 설계하라
   - 공개용 agent에서 중요한 것은 “똑똑함”뿐 아니라 위험한 행동을 막는 경계라는 점을 설명한다.
   - prompt injection, tool injection, source trust, secret redaction, permission / approval, sandbox, audit log, data retention을 다룬다.
   - memory와 tool이 붙었을 때 문서/웹/source 안의 악성 instruction을 어떻게 다뤄야 하는지 설명한다.
