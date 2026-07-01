@@ -122,36 +122,115 @@ Hook은 lifecycle event마다 실행되는 command다.
 
 - [x] 10. 나만의 Harness Lab 설계하기
   - 바로 제품을 만들지 않고 관찰 장치를 만든다는 관점을 설명한다.
-  - Context Inspector, Hook Playground, Mini Mode Plugin, Memory Harness, Skill Authoring Lab을 실험으로 소개한다.
+  - Context Inspector, Hook Playground, Tool Runner / Observation Lab, Memory Harness, Skill Authoring Lab, Mini Mode Plugin을 실험으로 소개한다.
 
-## 2차 확장: AX 개발자 성장 커리큘럼
+## 다음 단계: 공개 가능한 하네스로 가기
 
-현재 repo는 1~2단계에 초점을 둔다.
+1~10장은 agent harness가 어떻게 동작하는지 이해하고, 개인용 agent나 작은 실험 장치를 만들 수 있는 기반을 만든다.
+
+다음 단계는 바로 “대중용 완성형 AI 비서”를 만드는 것이 아니다.
+
+공개할 만한 developer tool이나 plugin으로 가려면 두 가지가 더 필요하다.
+
+```text
+Evaluation
+→ 잘 동작하는지 어떻게 판단할 것인가
+
+Safety boundary
+→ 위험하게 동작하지 않게 어떻게 막을 것인가
+```
+
+그 다음에 10장의 lab 중 하나를 실제 코드로 만든다.
+
+```text
+1. 11장 Evaluation design
+2. 12장 Safety boundary
+3. harness-lab 미니 구현
+4. 작고 공개 가능한 CLI/plugin/template로 분리
+```
+
+### 2차 집필 목차
+
+- [ ] 11. Evaluation design: 에이전트가 잘 동작하는지 어떻게 판단할까
+  - 에이전트 평가는 “답변이 마음에 드는가”가 아니라 runtime decision이 재현 가능하게 좋은지 보는 일이라는 관점을 설명한다.
+  - golden task, regression test, tool call accuracy, memory retrieval precision, context assembly regression을 다룬다.
+  - false positive / false negative, destructive action safety, approval boundary, observation quality를 설명한다.
+  - 웹 개발자의 테스트 피라미드, 회귀 테스트, 로그 기반 운영과 연결한다.
+
+- [ ] 12. Safety boundary: 모델을 믿지 말고 경계를 설계하라
+  - 공개용 agent에서 중요한 것은 “똑똑함”뿐 아니라 위험한 행동을 막는 경계라는 점을 설명한다.
+  - prompt injection, tool injection, source trust, secret redaction, permission / approval, sandbox, audit log, data retention을 다룬다.
+  - memory와 tool이 붙었을 때 문서/웹/source 안의 악성 instruction을 어떻게 다뤄야 하는지 설명한다.
+  - connector나 외부 API 권한은 최소 권한, dry-run, confirmation, audit 중심으로 설계해야 함을 다룬다.
+
+### 3차 실습: Harness Lab 구현
+
+문서 11~12장을 마친 뒤, 10장의 lab 중 하나를 실제 코드로 만든다.
+
+첫 구현 후보:
+
+- [ ] `agent-tool-schema-linter`
+  - 9장 Tool design을 코드로 옮긴 작은 CLI.
+  - tool schema를 읽고 name/description/input/output/error/approval/idempotency 위험을 검사한다.
+  - 범위가 작고, 공개 가치가 있으며, 테스트하기 쉽다.
+
+- [ ] `harness-context-inspector`
+  - 3장/10장의 Context Inspector를 코드로 옮긴 작은 CLI 또는 local report generator.
+  - 내 harness가 어떤 layer를 어떤 이유로 조립했는지 보여준다.
+  - hosted Codex 내부 payload를 재현한다고 주장하지 않고, “your own harness / local agent context inspector”로 포지셔닝한다.
+
+- [ ] `harness-lab`
+  - 10장의 전체 lab을 실행 가능한 예제로 묶는다.
+  - context-inspector, hook-playground, tool-runner-observation, memory-harness, skill-authoring, mini-mode-plugin을 포함한다.
+  - 처음부터 모두 만들지 않고 하나씩 추가한다.
+
+구현 우선순위:
+
+```text
+1. agent-tool-schema-linter
+2. harness-context-inspector
+3. harness-lab 통합
+```
+
+`agent-tool-schema-linter`를 첫 구현으로 보는 이유:
+
+```text
+범위가 작다.
+9장 내용과 직접 연결된다.
+공개 가치가 있다.
+위험이 낮다.
+CLI로 만들기 쉽다.
+테스트를 만들기 쉽다.
+```
+
+## 4차 확장: AX 개발자 성장 커리큘럼
+
+현재 repo는 먼저 1~3단계에 초점을 둔다.
 
 ```text
 1단계: Agent literacy
 2단계: Harness engineering
+3단계: Evaluation & safety
 ```
 
 나중에 확장할 방향:
 
 ```text
-3단계: Workflow automation
-4단계: Evaluation & operations
+4단계: Workflow automation
 5단계: AX delivery
 ```
 
 후속 장 후보:
 
-- [ ] 11. AX 개발자는 무엇을 하는가
+- [ ] 13. AX 개발자는 무엇을 하는가
   - AX를 단순 LLM API 개발이 아니라 업무 분석, 자동화 설계, 현업 정착, 성과 측정까지 포함하는 역할로 설명한다.
   - 웹 개발자의 API/DB/권한/운영 경험이 왜 강점인지 다룬다.
 
-- [ ] 12. AX 프로젝트는 어떻게 발견하고 설계하는가
+- [ ] 14. AX 프로젝트는 어떻게 발견하고 설계하는가
   - 어떤 업무가 agent에 적합한지, 어떤 업무는 일반 CRUD/스크립트/자동화가 더 나은지 판단한다.
   - 업무 flow를 쪼개고 병목, 반복 작업, human-in-the-loop 지점을 찾는 법을 다룬다.
 
-- [ ] 13. 평가와 운영: 데모에서 실제 업무 도구로
+- [ ] 15. 운영과 정착: 데모에서 실제 업무 도구로
   - agent 품질 측정, 실패 로그, 재시도, 권한, 보안, 비용, latency, 사용자 피드백, ROI를 다룬다.
 
 ## 리라이트 작업 순서
