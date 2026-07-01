@@ -116,7 +116,7 @@ Hook은 lifecycle event마다 실행되는 command다.
   - recent history, summary, retrieval, stale memory, source discipline을 설명한다.
   - memory를 session/cache/DB search/ranking 문제로 비유한다.
 
-- [ ] 09. Tool design: 모델에게 함수를 맡기는 법
+- [x] 09. Tool design: 모델에게 함수를 맡기는 법
   - tool schema는 모델을 위한 API 문서라는 관점을 설명한다.
   - name, description, input schema, output contract, when to call, when not to call을 다룬다.
 
