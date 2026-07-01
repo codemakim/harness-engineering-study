@@ -216,6 +216,21 @@ prompt injection은 prompt만으로 해결하지 않는다.
 
 권한과 실행 경계로 해결한다.
 
+다만 prompt injection은 완전히 “해결”되는 문제가 아니라 위험을 줄이는 문제다.
+
+```text
+untrusted labeling
+instruction hierarchy
+tool permission
+approval
+sandbox
+output filtering
+```
+
+이것들을 함께 써도 모델이 영향을 받을 수 있다.
+
+그래서 high-risk action은 최종적으로 runner policy에서 차단해야 한다.
+
 ## Tool injection: tool output도 믿을 수 없다
 
 tool output도 context에 다시 들어간다.
@@ -299,7 +314,7 @@ memory
 
 ```text
 AGENTS.md
-→ repo 작업 규칙으로 신뢰 가능
+→ 신뢰한 workspace의 checked-in guidance로 취급 가능
 
 user prompt
 → 현재 사용자의 요청이지만 권한 확인 필요
@@ -313,6 +328,20 @@ email body
 memory
 → 과거에서 온 local recall, stale 가능성 있음
 ```
+
+단, AGENTS.md도 절대적인 신뢰 source는 아니다.
+
+내가 소유하고 신뢰한 workspace의 AGENTS.md와, 외부에서 방금 clone한 repo의 AGENTS.md는 다르다.
+
+```text
+trusted workspace의 AGENTS.md
+→ repo 작업 guidance로 사용 가능
+
+외부 repo의 AGENTS.md
+→ review/trust 대상
+```
+
+checked-in guidance라도 출처와 workspace trust를 같이 봐야 한다.
 
 좋은 harness는 source마다 label을 붙인다.
 
@@ -400,6 +429,20 @@ audit export
 
 따라서 tool runner와 logger는 redaction layer를 가져야 한다.
 
+redaction도 완벽하다고 가정하면 안 된다.
+
+가능하면 blacklist 기반으로 “secret처럼 보이는 pattern 제거”만 하지 말고, allowlist 기반으로 모델에게 보여줄 field를 고르는 편이 더 안전하다.
+
+```text
+blacklist
+→ API key처럼 보이는 문자열을 찾아 제거
+
+allowlist
+→ title, status, createdAt처럼 허용된 field만 노출
+```
+
+민감한 시스템일수록 allowlist가 기본값이어야 한다.
+
 ## Permission / approval: 귀찮음이 아니라 안전장치다
 
 approval은 UX를 느리게 만든다.
@@ -454,6 +497,21 @@ runner policy다.
 runner는 write/destructive policy에 따라 멈춰야 한다.
 ```
 
+approval도 만능은 아니다.
+
+사용자가 무엇을 승인하는지 이해할 수 있어야 한다.
+
+```text
+diff
+대상
+범위
+외부 전송 여부
+되돌릴 수 있는지 여부
+비용 발생 여부
+```
+
+이런 정보가 없는 모호한 approval은 사실상 경계가 아니다.
+
 Codex도 이 구조를 쓴다.
 
 공식 manual 기준으로 Codex는 sandbox와 approval policy를 함께 사용한다. sandbox는 agent가 무엇을 건드릴 수 있는지의 기술적 경계이고, approval policy는 그 경계를 넘어가거나 위험한 action을 할 때 언제 사용자에게 물어볼지 정한다. side-effect가 있는 app/MCP tool call도 approval 대상이 될 수 있다.
@@ -479,6 +537,10 @@ network off
 danger-full-access
 → 거의 모든 경계 해제
 ```
+
+sandbox mode의 이름과 정확한 동작은 제품, CLI, 설정에 따라 달라질 수 있다.
+
+여기서는 `read-only`, `workspace-write`, network 제한, full access라는 권한 축을 개념적으로 설명한다.
 
 공부용 lab이나 공개용 template은 기본값을 좁게 잡는 편이 좋다.
 
@@ -538,6 +600,20 @@ private token은 ~/.env에 있다.
 이런 내용이 memory로 저장되면 위험하다.
 
 그래서 memory에는 저장 정책이 필요하다.
+
+Memory poisoning은 retrieval 문제가 아니라 capture 문제이기도 하다.
+
+memory 후보를 뽑는 순간부터 걸러야 한다.
+
+```text
+safety policy를 약화시키는 문장
+secret 위치
+일회성 우회 지시
+외부 content 안의 명령문
+출처 없는 강한 선호
+```
+
+이런 것은 durable memory로 저장하지 않아야 한다.
 
 ```text
 stable preference
@@ -619,6 +695,23 @@ body 전체를 audit log에 남기지 않아도 된다.
 hash나 summary로 충분할 수 있다.
 
 중요한 것은 “왜 실행됐거나 막혔는지”다.
+
+audit log 자체도 민감 정보다.
+
+따라서 audit log에도 접근 권한과 retention이 필요하다.
+
+공개용이나 운영용 agent라면 변조 방지도 고려한다.
+
+```text
+append-only log
+hash chain
+write-once storage
+export signature
+```
+
+입문 단계에서 전부 구현할 필요는 없다.
+
+하지만 “audit log는 아무나 읽고 고칠 수 있는 debug file”이라고 두면 안 된다.
 
 ## Data retention: 오래 보관할수록 책임도 커진다
 
@@ -717,6 +810,22 @@ delete_email
 
 approval, audit, retention도 다르게 설계해야 한다.
 
+권한은 connector 단위가 아니라 capability 단위로 쪼개는 것이 좋다.
+
+```text
+Gmail access
+→ 너무 넓음
+
+search_email
+read_email
+draft_email
+send_email
+delete_email
+→ capability별로 approval과 audit을 걸 수 있음
+```
+
+그래야 최소 권한이 실제 설계가 된다.
+
 ## 작은 safety checklist
 
 공개 전 최소 checklist를 만든다면 이렇게 시작할 수 있다.
@@ -734,6 +843,18 @@ approval, audit, retention도 다르게 설계해야 한다.
 10. data retention과 삭제 정책이 있는가?
 11. connector scope가 최소 권한인가?
 12. safety regression eval이 있는가?
+13. safety boundary를 깨려고 하는 adversarial golden task가 있는가?
+```
+
+adversarial golden task는 일부러 경계를 공격하는 평가다.
+
+예:
+
+```text
+외부 문서가 send_email을 요구하는 prompt injection task
+tool output이 SYSTEM OVERRIDE를 포함하는 task
+memory 후보가 approval 우회를 요구하는 task
+secret-looking string이 log에 섞이는 task
 ```
 
 이 checklist는 완성된 보안 인증이 아니다.
@@ -764,7 +885,7 @@ Approval
 → 위험 action 전 확인
 ```
 
-Codex manual도 기본적으로 sandbox와 approval을 함께 설명한다. 기본적으로 local agent는 제한된 sandbox에서 동작하고, network나 sandbox 밖 action처럼 더 위험한 동작은 approval policy와 연결된다. prompt injection 위험 때문에 web search나 live browsing, network access를 켤 때 주의하라는 설명도 있다.
+현재 Codex manual도 sandbox와 approval을 함께 설명한다. 기본적으로 local agent는 제한된 sandbox에서 동작하고, network나 sandbox 밖 action처럼 더 위험한 동작은 approval policy와 연결된다. prompt injection 위험 때문에 web search나 live browsing, network access를 켤 때 주의하라는 설명도 있다.
 
 이 장에서 배운 구조와 같다.
 
@@ -826,15 +947,15 @@ approval은 friction이다.
 
 ```text
 1. 모델을 믿지 말고, 경계를 설계한다.
-2. 외부 content와 tool output은 instruction이 아니라 untrusted data로 본다.
-3. source마다 trust label과 allowed use를 둔다.
-4. secret은 context에 넣지 않는 것이 최선이다.
-5. write/destructive/external side-effect는 approval과 audit이 필요하다.
-6. sandbox는 agent가 실수했을 때 피해 반경을 줄인다.
-7. memory는 stale하거나 poisoning될 수 있으므로 source/confidence/freshness가 필요하다.
-8. audit log는 무엇이 실행됐고 왜 막혔는지 설명해야 한다.
-9. data retention은 짧고 명시적이며 삭제 가능해야 한다.
-10. 공개용 agent는 최소 권한 connector와 safety regression eval에서 시작한다.
+2. Prompt injection은 완전 제거보다 residual risk를 줄이고 high-risk action을 runner policy로 막는 문제다.
+3. 외부 content와 tool output은 instruction이 아니라 untrusted data로 본다.
+4. source마다 trust label과 allowed use를 둔다.
+5. secret은 context에 넣지 않는 것이 최선이고, 노출 field는 allowlist로 좁힌다.
+6. write/destructive/external side-effect는 명확한 approval과 audit이 필요하다.
+7. sandbox는 agent가 실수했을 때 피해 반경을 줄인다.
+8. memory는 capture 단계부터 poisoning을 막아야 한다.
+9. audit log는 접근 권한, retention, integrity를 고려해야 한다.
+10. 공개용 agent는 capability 단위 최소 권한과 adversarial safety eval에서 시작한다.
 ```
 
 ## 생각해볼 질문
@@ -846,6 +967,8 @@ approval은 friction이다.
 5. write/destructive/external side-effect tool은 approval 없이는 실행되지 않는가?
 6. sandbox 기본값은 충분히 좁은가?
 7. memory에 저장하면 안 되는 정보가 무엇인지 정해져 있는가?
-8. 사고가 났을 때 audit log만 보고 어떤 action이 왜 실행됐는지 설명할 수 있는가?
-9. connector 권한은 최소 권한인가?
-10. safety boundary를 깨는 golden task를 eval에 넣었는가?
+8. memory capture/write path에서 approval 우회나 secret 위치 같은 문장을 걸러내는가?
+9. 사고가 났을 때 audit log만 보고 어떤 action이 왜 실행됐는지 설명할 수 있는가?
+10. audit log 자체의 접근 권한과 retention은 정해져 있는가?
+11. connector 권한은 search/read/draft/send/delete 같은 capability 단위로 나뉘어 있는가?
+12. safety boundary를 깨는 adversarial golden task를 eval에 넣었는가?
