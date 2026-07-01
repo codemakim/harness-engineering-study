@@ -21,6 +21,7 @@ Caveman과 Ponytail로 배우는 Codex 에이전트 구조.
 8. [Memory design: 모델이 기억하는 게 아니라 하네스가 가져온다](docs/08-memory-design.md)
 9. [Tool design: 모델에게 함수를 맡기는 법](docs/09-tool-design.md)
 10. [나만의 Harness Lab 설계하기](docs/10-harness-lab.md)
+11. [Evaluation design: 에이전트가 잘 동작하는지 어떻게 판단할까](docs/11-evaluation-design.md)
 
 ## 현재 상태
 

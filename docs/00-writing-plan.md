@@ -151,7 +151,7 @@ Safety boundary
 
 ### 2차 집필 목차
 
-- [ ] 11. Evaluation design: 에이전트가 잘 동작하는지 어떻게 판단할까
+- [x] 11. Evaluation design: 에이전트가 잘 동작하는지 어떻게 판단할까
   - 에이전트 평가는 “답변이 마음에 드는가”가 아니라 runtime decision이 재현 가능하게 좋은지 보는 일이라는 관점을 설명한다.
   - golden task, regression test, tool call accuracy, memory retrieval precision, context assembly regression을 다룬다.
   - false positive / false negative, destructive action safety, approval boundary, observation quality를 설명한다.
