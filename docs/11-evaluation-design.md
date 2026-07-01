@@ -313,6 +313,36 @@ recall
 → 필요한 memory 중 얼마나 가져왔는가
 ```
 
+memory retrieval에서는 precision과 recall의 균형이 필요하다.
+
+하지만 둘을 무조건 동시에 올릴 수는 없다.
+
+```text
+recall을 너무 높임
+→ 관련 없는 memory까지 들어와 context noise 증가
+
+precision만 너무 높임
+→ 꼭 필요한 stable preference나 project rule을 놓침
+```
+
+빠지면 반복 오류가 나는 memory는 recall을 높인다.
+
+```text
+사용자 timezone
+안전 정책
+프로젝트 빌드/테스트 규칙
+반복되는 선호
+```
+
+반대로 오래된 진행 상태나 추측성 memory는 precision과 freshness를 우선한다.
+
+```text
+지난주 작업 중간 상태
+출처 없는 추정
+한 번만 나온 일회성 TODO
+오래된 preference
+```
+
 처음에는 수학적으로 복잡하게 하지 않아도 된다.
 
 작은 golden task에서 이렇게 보면 된다.
@@ -361,7 +391,7 @@ selected만 보지 말고 rejected도 본다.
 
 ## 평가 단위 3. Tool call accuracy
 
-tool 평가는 두 단계로 나눈다.
+tool 평가는 세 단계로 나눈다.
 
 ```text
 tool selection
@@ -369,6 +399,9 @@ tool selection
 
 tool arguments
 → arguments가 맞는가
+
+tool non-call accuracy
+→ tool을 부르면 안 되는 상황에서 부르지 않았는가
 ```
 
 예:
@@ -439,6 +472,16 @@ strict schema 요구사항을 지켰는가?
 
 평가 결과는 prompt를 고치는 재료가 아니라 schema를 고치는 재료이기도 하다.
 
+특히 write, destructive, external side-effect tool에서는 non-call accuracy가 중요하다.
+
+```text
+좋은 agent
+→ 필요한 tool을 잘 부름
+→ 부르면 안 되는 tool은 부르지 않음
+```
+
+agent 사고는 “틀린 tool을 호출함”뿐 아니라 “아무 tool도 부르면 안 되는 상황에서 호출함”으로도 생긴다.
+
 ## 평가 단위 4. Runner validation과 approval boundary
 
 runner는 실제 보안 경계다.
@@ -506,6 +549,8 @@ external side effect
 ```
 
 평가는 이 경계를 깨는 regression을 잡아야 한다.
+
+approval boundary 평가는 12장의 safety boundary와 직접 연결된다. 여기서 통과하지 못한 action은 단순 품질 문제가 아니라 공개 전 차단해야 할 safety regression이다.
 
 ## 평가 단위 5. Error recovery
 
@@ -674,6 +719,81 @@ evaluation은 이 trade-off를 명시해야 한다.
 
 위험한 행동일수록 보수적으로 평가한다.
 
+실전 평가에서는 실패를 단순 pass/fail 개수로만 보지 말고 비용을 붙일 수 있다.
+
+```text
+severity 1
+→ read search miss
+
+severity 2
+→ 불필요한 confirmation
+
+severity 5
+→ 승인 없는 write 시도
+
+severity 10
+→ 결제, 삭제, 외부 전송, 중복 실행
+```
+
+낮은 빈도의 실패라도 비용이 크면 release blocker가 된다.
+
+## 반복 실행과 흔들림
+
+LLM 기반 agent는 같은 golden task도 매번 완전히 같은 trace를 만들지 않을 수 있다.
+
+이유는 여러 가지다.
+
+```text
+sampling
+model update
+retrieval order 변화
+tool timing
+memory snapshot 변화
+prompt/schema 수정
+```
+
+그래서 중요한 task는 한 번만 실행하지 말고 여러 번 실행해 pass rate를 본다.
+
+예:
+
+```text
+deterministic check
+→ 10회 중 10회 통과
+
+tool selection
+→ 10회 중 9회 이상 기대 tool 선택
+
+write/destructive mustNotCall
+→ 10회 중 10회 위반 없음
+
+final answer wording
+→ 일부 표현 변동 허용
+```
+
+모든 항목에 같은 안정성을 요구할 필요는 없다.
+
+하지만 safety assertion은 흔들리면 안 된다.
+
+```text
+답변 표현이 조금 달라짐
+→ 허용 가능
+
+delete tool을 가끔 잘못 호출함
+→ 허용 불가
+```
+
+평가할 때는 반복 실행 결과를 함께 본다.
+
+```json
+{
+  "taskId": "calendar-preview-before-write",
+  "runs": 10,
+  "passed": 9,
+  "passRate": 0.9,
+  "safetyViolations": 0
+}
+```
+
 ## 작은 eval runner 만들기
 
 처음부터 거대한 평가 플랫폼은 필요 없다.
@@ -734,6 +854,52 @@ evals/
 }
 ```
 
+하지만 final answer만 저장하면 안 된다.
+
+실패 원인을 재현하려면 trace를 함께 남겨야 한다.
+
+```json
+{
+  "taskId": "calendar-preview-before-write",
+  "metadata": {
+    "model": "example-model",
+    "temperature": 0.2,
+    "promptVersion": "2026-07-01",
+    "toolSchemaVersion": "calendar-tools-v1",
+    "memorySnapshot": "memories-2026-07-01",
+    "runnerVersion": "runner-v1",
+    "evalDataVersion": "evals-v1"
+  },
+  "trace": {
+    "contextReport": {},
+    "memoryReport": {},
+    "toolCalls": [],
+    "runnerResults": [],
+    "observations": [],
+    "finalAnswer": ""
+  },
+  "assertions": {
+    "passed": true,
+    "failures": []
+  }
+}
+```
+
+Golden task도 코드처럼 version 관리해야 한다.
+
+각 eval run에는 model, temperature, prompt version, tool schema version, memory snapshot, runner version, eval data version을 기록한다.
+
+그래야 실패가 어디서 왔는지 추적할 수 있다.
+
+```text
+model 변화인가?
+prompt 변화인가?
+tool schema 변화인가?
+memory snapshot 변화인가?
+runner bug인가?
+eval data 수정 때문인가?
+```
+
 핵심은 automation이다.
 
 매번 사람이 읽고 판단하면 regression을 놓친다.
@@ -786,6 +952,20 @@ LLM judge는 코드로 어려운 것에만 쓴다.
 ```
 
 그래야 평가 시스템 자체가 덜 흔들린다.
+
+LLM judge를 쓸 때도 judge prompt, judge model, rubric version을 기록해야 한다.
+
+그렇지 않으면 평가 결과 자체가 바뀌었을 때 원인을 추적하기 어렵다.
+
+```json
+{
+  "judge": {
+    "model": "example-judge-model",
+    "promptVersion": "judge-prompt-v1",
+    "rubricVersion": "source-faithfulness-v1"
+  }
+}
+```
 
 ## Codex에서는 어떻게 보이는가
 
@@ -907,10 +1087,11 @@ agent evaluation은 model, prompt, context assembly, memory, tool schema, runner
 3. Context assembly, memory retrieval, tool call, runner validation, approval, error recovery를 따로 본다.
 4. Observation quality도 평가 대상이다.
 5. False positive와 false negative는 실패 비용이 다르다.
-6. 코드로 확인 가능한 것은 deterministic check로 먼저 본다.
-7. LLM-as-judge는 정성 평가에 보조적으로 쓴다.
-8. 작은 eval runner부터 시작하면 된다.
-9. 좋은 evaluation은 “모델이 이상하다”를 “어느 harness decision이 틀렸다”로 바꿔준다.
+6. 중요한 task는 여러 번 실행해 pass rate와 safety violation을 본다.
+7. eval trace에는 context, memory, tool, runner, observation, final answer와 version metadata를 남긴다.
+8. 코드로 확인 가능한 것은 deterministic check로 먼저 본다.
+9. LLM-as-judge는 정성 평가에 보조적으로 쓰고 judge version도 기록한다.
+10. 좋은 evaluation은 “모델이 이상하다”를 “어느 harness decision이 틀렸다”로 바꿔준다.
 ```
 
 ## 생각해볼 질문
@@ -920,5 +1101,7 @@ agent evaluation은 model, prompt, context assembly, memory, tool schema, runner
 3. memory retrieval에서 mustInclude와 mustExclude를 정의할 수 있는가?
 4. write/destructive action의 approval boundary를 테스트하고 있는가?
 5. error observation을 받은 뒤 agent가 복구하는지 평가하고 있는가?
-6. final answer 말고 context report, tool trace, observation을 저장하고 있는가?
-7. 코드로 검사할 수 있는데 LLM judge에게 맡기고 있는 것은 없는가?
+6. 중요한 golden task를 여러 번 실행해 pass rate를 보고 있는가?
+7. final answer 말고 context report, memory report, tool trace, runner result, observation을 저장하고 있는가?
+8. eval run마다 model/prompt/schema/memory/runner/eval data version을 기록하고 있는가?
+9. 코드로 검사할 수 있는데 LLM judge에게 맡기고 있는 것은 없는가?
