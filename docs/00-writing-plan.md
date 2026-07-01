@@ -120,7 +120,7 @@ Hook은 lifecycle event마다 실행되는 command다.
   - tool schema는 모델을 위한 API 문서라는 관점을 설명한다.
   - name, description, input schema, output contract, when to call, when not to call을 다룬다.
 
-- [ ] 10. 나만의 Harness Lab 설계하기
+- [x] 10. 나만의 Harness Lab 설계하기
   - 바로 제품을 만들지 않고 관찰 장치를 만든다는 관점을 설명한다.
   - Context Inspector, Hook Playground, Mini Mode Plugin, Memory Harness, Skill Authoring Lab을 실험으로 소개한다.
 
