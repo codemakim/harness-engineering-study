@@ -234,32 +234,39 @@ micro coding agent도 같다.
 
 하네스가 먼저 일감을 잘라준다.
 
+단, v0.1에서는 이 “일감 자르기”도 자동화하지 않는다.
+
+처음에는 사람이 자른 `task.md`를 입력으로 받는다.
+
+자동 decomposition은 나중 실험이다.
+
 ## 기본 loop
 
 v0.1의 loop는 이 정도면 된다.
 
 ```text
-1. problem definition
-2. repo scan
-3. task decomposition
-4. local context pack
-5. model patch proposal
+1. task.md 읽기
+2. allowed files 확인
+3. repo scan 보조 정보 만들기
+4. local context pack 만들기
+5. model patch proposal 받기
 6. patch validation
-7. test run
-8. trace write
-9. stop or retry
+7. patch apply
+8. test run
+9. trace write
+10. stop or retry
 ```
 
 flow로 보면:
 
 ```text
-user task
+human-written task.md
   ↓
 problem card
   ↓
-repo scan
-  ↓
 small work item
+  ↓
+repo scan helper
   ↓
 context pack
   ↓
@@ -285,6 +292,15 @@ destructive command를 실행할 수 있는가
 ```
 
 이게 agent harness다.
+
+중요한 제한:
+
+```text
+v0.1에서는 task decomposition을 자동화하지 않는다.
+사람이 작성한 task.md와 allowedFiles를 입력으로 받는다.
+harness는 context pack 생성, patch validation, test run, trace 기록에 집중한다.
+자동 decomposition은 v0.3 이후의 실험이다.
+```
 
 ## problem definition
 
@@ -343,6 +359,19 @@ package script 확인
 최근 error log에서 path 추출
 ```
 
+하지만 v0.1의 repo scan은 allowedFiles를 자동 결정하지 않는다.
+
+allowedFiles는 `task.md`가 제공한다.
+
+repo scan은 보조 역할만 한다.
+
+```text
+allowedFiles 안의 snippet 추출
+symbol 존재 확인
+test 파일 존재 확인
+test command 확인
+```
+
 예:
 
 ```bash
@@ -381,6 +410,10 @@ npm test -- auth.test.ts
 
 큰 요구사항은 작은 work item으로 쪼갠다.
 
+하지만 v0.1에서는 이 단계를 harness가 자동으로 하지 않는다.
+
+fixture 작성자 또는 사람이 미리 쪼개둔다.
+
 나쁜 work item:
 
 ```text
@@ -411,6 +444,12 @@ type WorkItem = {
 v0.1에서는 이 type을 코드로 꼭 만들 필요는 없다.
 
 markdown 파일이어도 된다.
+
+`hypothesis`도 모델이 자동 추론한 원인이 아니다.
+
+v0.1에서는 fixture 작성자가 제공한 작업 가설이다.
+
+자동 원인 추론은 나중 실험으로 미룬다.
 
 중요한 것은 구조다.
 
@@ -527,6 +566,12 @@ dependency 추가 → reject
 
 작은 모델에게 “하지 마”라고 말하는 것보다, runtime에서 막는 것이 안전하다.
 
+단, patch validation은 correctness를 보장하지 않는다.
+
+이건 boundary check다.
+
+test가 부족하면 잘못된 patch도 통과할 수 있다.
+
 ## test run
 
 코딩 agent는 test 없이 완료하면 안 된다.
@@ -618,6 +663,11 @@ trace가 더 중요하다.
 {
   "taskId": "bug-001-password-whitespace",
   "model": "local-small-coder",
+  "modelCommand": "ollama run local-small-coder",
+  "temperature": 0.2,
+  "promptVersion": "micro-coder-v0.1",
+  "contextPackHash": "sha256:abc123...",
+  "fixtureVersion": "bug-001-v1",
   "attempts": 2,
   "result": "failed",
   "failureStage": "patch_generation",
@@ -671,7 +721,8 @@ model command
 
 ```text
 task 읽기
-repo scan 결과 만들기
+allowedFiles 확인
+repo scan 보조 정보 만들기
 context pack 만들기
 model 호출하기
 unified diff 받기
@@ -692,6 +743,9 @@ autonomous backlog handling
 automatic dependency install
 production sandbox
 web dashboard
+automatic task decomposition
+automatic relevant file selection
+model-driven tool orchestration
 ```
 
 v0.1은 실험 장치다.
@@ -797,7 +851,22 @@ instruction_following_failure
 → allowed files, output format, dependency 금지를 어김
 
 patch_generation_failure
-→ patch가 문법적으로 깨졌거나 apply되지 않음
+→ patch 의도는 보이지만 코드 생성 자체가 틀림
+
+diff_format_failure
+→ unified diff 형식을 지키지 못함
+
+patch_apply_failure
+→ diff처럼 보이지만 실제 apply 실패
+
+test_command_failure
+→ 테스트 command 자체가 잘못됐거나 환경 문제
+
+timeout_failure
+→ 모델 호출 또는 test run이 시간 초과
+
+no_change_failure
+→ patch를 냈지만 실제 변경이 없음
 
 test_reasoning_failure
 → test failure를 잘못 해석함
@@ -827,6 +896,14 @@ test_reasoning_failure가 많다
 micro coding agent도 tool이 필요하다.
 
 하지만 v0.1 tool은 적어야 한다.
+
+정확히 말하면, v0.1에서는 모델이 직접 tool call을 고르지 않는다.
+
+모델은 unified diff만 만든다.
+
+`apply_patch`, `run_test`, `write_trace`는 harness가 deterministic하게 실행하는 internal operation이다.
+
+나중에 모델 주도 tool calling으로 확장할 수 있지만, 처음에는 orchestration을 모델에게 맡기지 않는다.
 
 ```text
 read_file
@@ -950,6 +1027,14 @@ diff --git a/src/math.ts b/src/math.ts
 unified diff는 검증하기 쉽다.
 
 patch 적용 실패도 명확하다.
+
+작은 모델은 unified diff 형식을 자주 깨뜨릴 수 있다.
+
+v0.1에서는 이를 자동 repair하지 않는다.
+
+그냥 `diff_format_failure`로 기록한다.
+
+diff repair나 function-body replacement는 v0.2 이후 실험이다.
 
 ## 구현 단계
 
@@ -1092,6 +1177,7 @@ fixture 20개로 확장
 failureStage dashboard
 context pack 크기별 비교
 test failure repair prompt 개선
+diff repair 또는 function-body replacement 실험
 ```
 
 v0.3:
@@ -1101,6 +1187,8 @@ real open-source small repo fixture
 multi-model comparison
 coverage-based test selection
 simple benchmark report
+automatic task decomposition
+automatic relevant file selection
 ```
 
 v0.4:
