@@ -145,8 +145,9 @@ Safety boundary
 ```text
 1. 11장 Evaluation design
 2. 12장 Safety boundary
-3. harness-lab 미니 구현
-4. 작고 공개 가능한 CLI/plugin/template로 분리
+3. Capstone 1: agent-tool-lint
+4. Capstone 2: micro coding agent
+5. Portfolio 기록
 ```
 
 ### 2차 집필 목차
@@ -163,16 +164,185 @@ Safety boundary
   - memory와 tool이 붙었을 때 문서/웹/source 안의 악성 instruction을 어떻게 다뤄야 하는지 설명한다.
   - connector나 외부 API 권한은 최소 권한, dry-run, confirmation, audit 중심으로 설계해야 함을 다룬다.
 
-### 3차 실습: Harness Lab 구현
+## 3차 실습: Capstone Challenges
 
-문서 11~12장을 마친 뒤, 10장의 lab 중 하나를 실제 코드로 만든다.
+1~12장은 agent harness literacy를 완성하는 구간이다.
 
-첫 구현 후보:
+그 다음은 “더 공부하기”보다 하나를 작게 만들어야 한다.
+
+실습 장은 일반 개론서 장이 아니라 과제 안내서처럼 쓴다.
+
+각 Capstone 장은 가능하면 다음 구조를 따른다.
+
+```text
+1. 목표
+2. 왜 이 과제를 하는가
+3. 만들 것
+4. MVP 범위
+5. 입력/출력 예시
+6. 구현 단계
+7. 평가 기준
+8. 완료 체크리스트
+9. README / 이력서 기록법
+10. 확장 과제
+```
+
+### 3차 실습 목차
+
+- [ ] 13. Capstone 1: `agent-tool-lint` 만들기
+  - LLM agent의 tool/function schema를 검사하는 CLI/CI 도구를 만든다.
+  - 9장 Tool design, 11장 Evaluation design, 12장 Safety boundary를 코드로 옮긴다.
+  - OpenAI function tool schema JSON을 입력으로 받고 markdown/json report를 출력한다.
+  - name, description, parameters, output contract, error contract, risk classification, approval boundary, idempotency rule을 검사한다.
+  - high severity issue가 있으면 `--fail-on high` 같은 CI mode로 실패시킬 수 있게 한다.
+
+- [ ] 14. Capstone 2: micro coding agent 설계하기
+  - 대형 모델용 coding agent가 아니라 작은 모델을 위한 coding harness를 설계한다.
+  - 큰 코딩 작업을 한 번에 맡기지 않고 problem definition, repo scan, task decomposition, function-level work item, local context pack, patch, test, trace로 쪼갠다.
+  - 작은 모델이 긴 refactor나 넓은 context에서 무너지지 않도록 patch 크기, 파일 범위, 함수 단위, test requirement를 제한한다.
+  - “작게 쪼개면 잘 될 것이다”가 아니라 eval로 실제 실패율이 줄어드는지 확인한다.
+  - Gemma 4 12B 같은 로컬/중형 모델을 예시 후보로 다룰 수 있지만, 특정 모델 성능을 단정하지 않고 모델 교체 가능한 harness 관점으로 쓴다.
+
+- [ ] 15. Portfolio: 실습 결과를 공개 가능한 기록으로 정리하기
+  - 만든 도구를 이력서, GitHub README, 블로그 글로 어떻게 설명할지 다룬다.
+  - “AI agent 만들었습니다”가 아니라 problem, why it matters, design, safety, evaluation, result, what I learned 구조로 기록한다.
+  - `agent-tool-lint`의 README 한 줄 소개, 사용 예시, fixture/test/eval 결과, CI badge, limitation을 정리한다.
+  - 이력서 문장과 포트폴리오 bullet을 작성한다.
+
+### Capstone 1 상세 계획: `agent-tool-lint`
+
+한 줄 정의:
+
+```text
+LLM agent의 tool/function schema를 검사해 모호한 이름, 느슨한 입력, 누락된 승인 경계, 위험한 side effect를 찾아주는 CLI.
+```
+
+제품 포지셔닝:
+
+```text
+에이전트용 ESLint.
+```
+
+대상:
+
+```text
+OpenAI function calling 쓰는 개발자
+MCP tool 만드는 개발자
+Codex/Claude Code plugin 만드는 개발자
+사내 agent에 tool 붙이는 개발자
+LangChain/LlamaIndex류 agent tool 만드는 개발자
+```
+
+MVP 범위:
 
 - [ ] `agent-tool-schema-linter`
-  - 9장 Tool design을 코드로 옮긴 작은 CLI.
-  - tool schema를 읽고 name/description/input/output/error/approval/idempotency 위험을 검사한다.
-  - 범위가 작고, 공개 가치가 있으며, 테스트하기 쉽다.
+  - 입력: OpenAI function tool schema JSON
+  - 출력: terminal report, markdown report, JSON report
+  - rule: name, description, parameters, `additionalProperties: false`, risk heuristic, approval boundary, error contract
+  - option: `--format text|json|markdown`, `--fail-on high`
+  - fixture: good/bad schema examples
+  - test: rule별 regression test
+
+검사 rule 후보:
+
+```text
+name-too-generic
+description-too-vague
+missing-when-not-to-call
+loose-input-string
+missing-additional-properties-false
+missing-required-fields
+missing-approval-boundary
+missing-output-contract
+missing-error-contract
+missing-idempotency
+write-tool-needs-dry-run-or-preview
+destructive-tool-needs-confirmation
+external-side-effect-needs-recipient-confirmation
+```
+
+위험도 분류:
+
+```text
+read
+dry-run / preview
+write
+destructive
+external_side_effect
+financial
+secret_access
+admin
+```
+
+완료 기준:
+
+```text
+나쁜 send_email schema를 high severity로 잡는다.
+좋은 search_docs schema는 통과한다.
+delete_* tool에 confirmation boundary가 없으면 실패한다.
+charge_* tool에 idempotency 언급이 없으면 실패한다.
+--fail-on high 옵션으로 CI 실패가 가능하다.
+markdown/json report를 생성한다.
+fixture 기반 regression test가 있다.
+```
+
+### Capstone 2 상세 계획: micro coding agent
+
+목표:
+
+```text
+작은 모델에게 큰 코딩을 시키지 말고,
+harness가 문제를 작게 쪼개고 검증 가능한 단위로 제한한다.
+```
+
+핵심 아이디어:
+
+```text
+큰 요구사항
+→ problem definition
+→ repo scan
+→ task decomposition
+→ function-level work item
+→ local context pack
+→ small patch
+→ test
+→ trace
+→ 다음 task
+```
+
+작은 모델용 제약:
+
+```text
+한 번에 한 파일 또는 한 함수
+긴 설계 금지
+큰 refactor 금지
+새 dependency 금지
+patch 크기 제한
+test 없는 변경 금지
+불확실하면 조사 task로 분리
+```
+
+검증 질문:
+
+```text
+작게 쪼개면 실제로 성공률이 올라가는가?
+작은 모델이 어느 단계에서 실패하는가?
+context pack이 너무 작거나 너무 큰가?
+function-level patch가 regression을 줄이는가?
+test failure를 보고 복구하는가?
+```
+
+첫 목표:
+
+```text
+작은 JS/TS 함수 버그 5개를 고친다.
+각 작업은 function-level ticket으로 쪼갠다.
+각 ticket마다 context, patch, test result, failure reason을 남긴다.
+```
+
+### 이후 구현 후보
+
+Capstone 1~2 이후에 확장한다.
 
 - [ ] `harness-context-inspector`
   - 3장/10장의 Context Inspector를 코드로 옮긴 작은 CLI 또는 local report generator.
@@ -184,53 +354,35 @@ Safety boundary
   - context-inspector, hook-playground, tool-runner-observation, memory-harness, skill-authoring, mini-mode-plugin을 포함한다.
   - 처음부터 모두 만들지 않고 하나씩 추가한다.
 
-구현 우선순위:
+## 5차 확장: AX 개발자 성장 커리큘럼
 
-```text
-1. agent-tool-schema-linter
-2. harness-context-inspector
-3. harness-lab 통합
-```
-
-`agent-tool-schema-linter`를 첫 구현으로 보는 이유:
-
-```text
-범위가 작다.
-9장 내용과 직접 연결된다.
-공개 가치가 있다.
-위험이 낮다.
-CLI로 만들기 쉽다.
-테스트를 만들기 쉽다.
-```
-
-## 4차 확장: AX 개발자 성장 커리큘럼
-
-현재 repo는 먼저 1~3단계에 초점을 둔다.
+현재 repo는 먼저 1~4단계에 초점을 둔다.
 
 ```text
 1단계: Agent literacy
 2단계: Harness engineering
 3단계: Evaluation & safety
+4단계: Capstone implementation
 ```
 
 나중에 확장할 방향:
 
 ```text
-4단계: Workflow automation
-5단계: AX delivery
+5단계: Workflow automation
+6단계: AX delivery
 ```
 
 후속 장 후보:
 
-- [ ] 13. AX 개발자는 무엇을 하는가
+- [ ] 16. AX 개발자는 무엇을 하는가
   - AX를 단순 LLM API 개발이 아니라 업무 분석, 자동화 설계, 현업 정착, 성과 측정까지 포함하는 역할로 설명한다.
   - 웹 개발자의 API/DB/권한/운영 경험이 왜 강점인지 다룬다.
 
-- [ ] 14. AX 프로젝트는 어떻게 발견하고 설계하는가
+- [ ] 17. AX 프로젝트는 어떻게 발견하고 설계하는가
   - 어떤 업무가 agent에 적합한지, 어떤 업무는 일반 CRUD/스크립트/자동화가 더 나은지 판단한다.
   - 업무 flow를 쪼개고 병목, 반복 작업, human-in-the-loop 지점을 찾는 법을 다룬다.
 
-- [ ] 15. 운영과 정착: 데모에서 실제 업무 도구로
+- [ ] 18. 운영과 정착: 데모에서 실제 업무 도구로
   - agent 품질 측정, 실패 로그, 재시도, 권한, 보안, 비용, latency, 사용자 피드백, ROI를 다룬다.
 
 ## 리라이트 작업 순서
