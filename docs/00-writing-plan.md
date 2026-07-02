@@ -189,7 +189,7 @@ Safety boundary
 
 ### 3차 실습 목차
 
-- [ ] 13. Capstone 1: `agent-tool-lint` 만들기
+- [x] 13. Capstone 1: `agent-tool-lint` 만들기
   - LLM agent의 tool/function schema를 검사하는 CLI/CI 도구를 만든다.
   - 9장 Tool design, 11장 Evaluation design, 12장 Safety boundary를 코드로 옮긴다.
   - OpenAI function tool schema JSON을 입력으로 받고 markdown/json report를 출력한다.
