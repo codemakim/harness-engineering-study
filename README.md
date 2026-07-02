@@ -9,6 +9,20 @@
 - [AX / Agent Harness Engineering](courses/ax-harness-engineering/README.md)
 - [React](courses/react/README.md)
 
+## Next session quick start
+
+Codex가 다음 세션에서 이어서 작업할 때는 [AGENTS.md](AGENTS.md)를 먼저 보면 된다.
+
+현재 상태:
+
+```text
+AX / Agent Harness Engineering
+→ 1~14장 작성 완료. 다음은 15장 Portfolio.
+
+React
+→ course 폴더만 준비됨. 블로그 원문 위치를 받으면 import 시작.
+```
+
 ## Notes
 
 - [Inbox](notes/inbox/)
