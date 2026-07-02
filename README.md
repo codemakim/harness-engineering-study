@@ -24,6 +24,7 @@ Caveman과 Ponytail로 배우는 Codex 에이전트 구조.
 11. [Evaluation design: 에이전트가 잘 동작하는지 어떻게 판단할까](docs/11-evaluation-design.md)
 12. [Safety boundary: 모델을 믿지 말고 경계를 설계하라](docs/12-safety-boundary.md)
 13. [Capstone 1: agent-tool-lint 만들기](docs/13-capstone-agent-tool-lint.md)
+14. [Capstone 2: micro coding agent 설계하기](docs/14-capstone-micro-coding-agent.md)
 
 ## 현재 상태
 

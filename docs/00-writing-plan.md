@@ -196,7 +196,7 @@ Safety boundary
   - name, description, parameters, output contract, error contract, risk classification, approval boundary, idempotency rule을 검사한다.
   - high severity issue가 있으면 `--fail-on high` 같은 CI mode로 실패시킬 수 있게 한다.
 
-- [ ] 14. Capstone 2: micro coding agent 설계하기
+- [x] 14. Capstone 2: micro coding agent 설계하기
   - 대형 모델용 coding agent가 아니라 작은 모델을 위한 coding harness를 설계한다.
   - 큰 코딩 작업을 한 번에 맡기지 않고 problem definition, repo scan, task decomposition, function-level work item, local context pack, patch, test, trace로 쪼갠다.
   - 작은 모델이 긴 refactor나 넓은 context에서 무너지지 않도록 patch 크기, 파일 범위, 함수 단위, test requirement를 제한한다.
