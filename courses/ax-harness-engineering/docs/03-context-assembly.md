@@ -45,7 +45,7 @@
 이 repo가 어디에 있는지
 이미 1장과 2장이 작성되었는지
 집필 계획이 무엇인지
-레거시 3장이 어떤 내용이었는지
+이전 대화에서 어떤 방향을 정했는지
 문서 톤이 어떤지
 GitHub에 push하는 흐름이 있는지
 ```
@@ -68,7 +68,7 @@ workspace path
 git status
 current branch
 writing plan file
-legacy chapter file
+previous conversation summary
 available tools
 permission policy
 ```
@@ -293,8 +293,8 @@ repo path
 writing plan
 → docs/00-writing-plan.md
 
-legacy chapter
-→ legacy/2026-06-25-pre-course-rewrite/docs/03-context-assembly.md
+previous context
+→ 이전 대화 요약, 피드백, 작성 방향
 
 current chapters
 → docs/01-model-memory-context.md

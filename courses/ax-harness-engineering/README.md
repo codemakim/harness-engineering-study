@@ -26,7 +26,6 @@ Caveman과 Ponytail로 배우는 Codex 에이전트 구조.
 ## 먼저 읽을 것
 
 - [집필 계획 / 리라이트 체크리스트](docs/00-writing-plan.md)
-- [레거시 문서: 2026-06-25 개편 전 버전](legacy/2026-06-25-pre-course-rewrite/README.md)
 
 ## 새 원고
 
@@ -48,11 +47,8 @@ Caveman과 Ponytail로 배우는 Codex 에이전트 구조.
 ## 현재 상태
 
 ```text
-legacy/
-→ 개편 전 문서 보존. 새 글 보기 전에 이전 내용을 쭉 읽고 싶을 때 사용.
-
 docs/
-→ 앞으로 새 개론서 원고를 한 장씩 작성할 위치.
+→ 교재형 원고를 한 장씩 작성할 위치.
 
 labs/
 → 나중에 실험 코드와 관찰 기록을 둘 위치.
