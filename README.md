@@ -1,66 +1,37 @@
-# Harness Engineering for Web Developers
+# Study Library
 
-Caveman과 Ponytail로 배우는 Codex 에이전트 구조.
+개인 학습 자료 모음.
 
-현재는 “개인 메모”에서 “웹 개발자를 위한 AX / Agent Harness 입문 개론서”로 개편하는 중이다.
+블로그에 흩어진 학습 글, Codex와 만든 교재, 실험 노트를 GitHub에서 읽기 좋게 모은다.
 
-## 먼저 읽을 것
+## Courses
 
-- [집필 계획 / 리라이트 체크리스트](docs/00-writing-plan.md)
-- [레거시 문서: 2026-06-25 개편 전 버전](legacy/2026-06-25-pre-course-rewrite/README.md)
+- [AX / Agent Harness Engineering](courses/ax-harness-engineering/README.md)
+- [React](courses/react/README.md)
 
-## 새 원고
+## Notes
 
-1. [모델은 왜 기억하는 것처럼 보일까?](docs/01-model-memory-context.md)
-2. [에이전트는 왜 모델 하나가 아닐까?](docs/02-agent-runtime.md)
-3. [답변 전 실제로 무슨 일이 일어날까?](docs/03-context-assembly.md)
-4. [왜 지시문 넣는 방법이 이렇게 많을까?](docs/04-codex-surfaces.md)
-5. [Hook은 왜 lifecycle에 꽂히는가?](docs/05-hooks-lifecycle.md)
-6. [Ponytail은 왜 강하게 작동하는가?](docs/06-ponytail-case-study.md)
-7. [Caveman으로 보는 surface와 adapter의 차이](docs/07-caveman-case-study.md)
-8. [Memory design: 모델이 기억하는 게 아니라 하네스가 가져온다](docs/08-memory-design.md)
-9. [Tool design: 모델에게 함수를 맡기는 법](docs/09-tool-design.md)
-10. [나만의 Harness Lab 설계하기](docs/10-harness-lab.md)
-11. [Evaluation design: 에이전트가 잘 동작하는지 어떻게 판단할까](docs/11-evaluation-design.md)
-12. [Safety boundary: 모델을 믿지 말고 경계를 설계하라](docs/12-safety-boundary.md)
-13. [Capstone 1: agent-tool-lint 만들기](docs/13-capstone-agent-tool-lint.md)
-14. [Capstone 2: micro coding agent 설계하기](docs/14-capstone-micro-coding-agent.md)
+- [Inbox](notes/inbox/)
 
-## 현재 상태
+## Templates
+
+- [Course README](templates/course-readme.md)
+- [Chapter](templates/chapter.md)
+- [Feedback](templates/feedback.md)
+
+## 운영 방식
 
 ```text
-legacy/
-→ 개편 전 문서 보존. 새 글 보기 전에 이전 내용을 쭉 읽고 싶을 때 사용.
+notes/inbox/
+→ 아직 정리 전인 원문, 아이디어, 질문을 임시 보관한다.
 
-docs/
-→ 앞으로 새 개론서 원고를 한 장씩 작성할 위치.
+courses/<topic>/legacy/
+→ 블로그 원문이나 예전 자료를 보존한다.
 
-labs/
-→ 나중에 실험 코드와 관찰 기록을 둘 위치.
+courses/<topic>/docs/
+→ 다시 읽기 좋은 교재형 문서만 둔다.
 ```
 
-## 개편 원칙
+원문은 바로 고치지 않는다.
 
-새 문서는 단순 요약이 아니라 기초부터 실력을 만드는 강의 자료여야 한다.
-
-각 장은 가능하면 다음 흐름을 따른다.
-
-```text
-1. 먼저 직관
-2. 정확한 개념
-3. 웹 개발자 비유
-4. 작은 예시
-5. 왜 중요한가
-6. Codex에서는 어떻게 보이는가
-7. 흔한 오해
-8. 요약
-9. 생각해볼 질문
-```
-
-## 주요 공식 문서
-
-- [Codex skills](https://developers.openai.com/codex/skills)
-- [AGENTS.md guidance](https://developers.openai.com/codex/guides/agents-md)
-- [Codex hooks](https://developers.openai.com/codex/hooks)
-- [Build Codex plugins](https://developers.openai.com/codex/plugins/build)
-- [Codex MCP](https://developers.openai.com/codex/mcp)
+먼저 `legacy/`나 `notes/inbox/`에 보관하고, 교재로 다듬은 글만 `docs/`에 둔다.
