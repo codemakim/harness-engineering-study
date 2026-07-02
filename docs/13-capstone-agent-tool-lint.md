@@ -233,6 +233,7 @@ v0.1은 이것만 한다.
 ```text
 입력
 → OpenAI function tool schema JSON
+→ Responses-style / Chat Completions-style shape normalize
 
 출력
 → terminal report
@@ -246,6 +247,7 @@ v0.1은 이것만 한다.
 → risk classification
 → approval boundary
 → error contract 존재 여부
+→ strict mode 준비도 일부 warning
 
 옵션
 → --format text|json|markdown
@@ -272,7 +274,11 @@ LLM 기반 review
 
 처음에는 OpenAI function tool schema JSON만 지원한다.
 
-예:
+다만 OpenAI tool schema는 API surface에 따라 모양이 다를 수 있다.
+
+v0.1에서는 최소 두 형태를 normalize한다.
+
+Responses-style:
 
 ```json
 [
@@ -299,9 +305,40 @@ LLM 기반 review
 ]
 ```
 
-단, 실제 OpenAI API의 tool schema shape는 SDK/API 버전에 따라 달라질 수 있다.
+Chat Completions-style:
 
-따라서 구현할 때는 adapter를 두는 편이 좋다.
+```json
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "send_email",
+      "description": "Send an email.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          }
+        },
+        "required": ["to", "subject", "body"]
+      }
+    }
+  }
+]
+```
+
+raw input shape는 provider/API surface마다 다를 수 있다.
+
+그래서 rule이 raw input을 직접 보면 안 된다.
+
+항상 adapter를 먼저 둔다.
 
 ```text
 raw input
@@ -326,6 +363,36 @@ type ToolDefinition = {
 
 하지만 내부 형태를 분리해두면 나중에 MCP/OpenAPI/LangChain adapter를 붙이기 쉽다.
 
+중요한 점:
+
+```text
+lint rule은 raw JSON shape를 몰라도 된다.
+lint rule은 normalizeToolSchema()가 만든 ToolDefinition만 본다.
+```
+
+## strict mode compatibility 주의
+
+OpenAI strict mode compatibility를 완전히 검증하는 것은 v0.2로 미룬다.
+
+하지만 v0.1에서도 다음은 warning으로 잡는다.
+
+```text
+additionalProperties: false 누락
+required 누락
+optional field를 nullable union으로 표현하지 않은 schema
+```
+
+이 검사는 보안 인증이 아니다.
+
+`strict mode 준비도`를 알려주는 lint다.
+
+즉:
+
+```text
+이 schema가 안전하다고 증명한다 → 아님
+strict mode에서 문제가 될 수 있는 냄새를 알려준다 → 맞음
+```
+
 ## Risk classification
 
 린터는 먼저 tool의 위험도를 추정한다.
@@ -342,6 +409,31 @@ admin
 unknown
 ```
 
+여기서 risk와 severity를 섞으면 안 된다.
+
+```text
+risk
+→ tool의 성격
+
+severity
+→ 발견된 issue의 심각도
+```
+
+예를 들어 `send_email`은 risk가 `external_side_effect`다.
+
+하지만 description, approval boundary, error contract, idempotency가 잘 되어 있으면 high issue가 없어야 한다.
+
+반대로 `search_docs`는 보통 read tool이다.
+
+하지만 secret source를 읽거나 민감한 raw result를 그대로 노출하면 issue severity가 올라갈 수 있다.
+
+정리하면:
+
+```text
+위험한 tool이라고 항상 실패는 아니다.
+위험한 tool인데 필요한 boundary가 빠졌을 때 high/critical issue가 된다.
+```
+
 이 분류는 완벽할 수 없다.
 
 처음에는 heuristic이면 충분하다.
@@ -356,10 +448,12 @@ read_*
 → read
 
 preview_*
-draft_*
 validate_*
 dry_run_*
 → dry_run
+
+draft_*
+→ dry_run candidate 또는 low-risk write candidate
 
 create_*
 update_*
@@ -391,6 +485,22 @@ read_secret
 get_token
 export_credentials
 → secret_access
+```
+
+주의: `draft_*`는 항상 dry_run이 아니다.
+
+local preview만 만들면 dry_run에 가깝다.
+
+하지만 Gmail, Slack, Notion 같은 외부 서비스에 draft object를 실제로 생성하면 write action이다.
+
+따라서 v0.1 heuristic은 `draft_*`를 무조건 dry_run으로 확정하지 않는다.
+
+```text
+draft_* + local/preview wording
+→ dry_run, confidence medium
+
+draft_* + gmail/slack/notion/external wording
+→ write, confidence medium
 ```
 
 classification이 틀릴 수 있으므로 report에는 confidence를 남긴다.
@@ -573,6 +683,20 @@ dangerous-field-missing-description
 
 문제는 write/destructive action을 자연어 `input` 하나로 받는 것이다.
 
+strict mode 준비도와도 연결된다.
+
+v0.1에서는 다음을 warning으로 본다.
+
+```text
+object schema인데 additionalProperties: false가 없음
+properties가 있는데 required가 비어 있음
+optional처럼 보이는 field가 nullable 표현 없이 빠져 있음
+```
+
+이건 “안전하지 않다”는 최종 판정이 아니다.
+
+strict schema로 가기 전에 손봐야 할 가능성이 있다는 신호다.
+
 ## Rule 4. output contract 검사
 
 tool output은 다음 모델 판단의 observation이다.
@@ -627,6 +751,25 @@ missing-source-or-timestamp-for-read-tool
 output-may-leak-sensitive-data
 ```
 
+주의할 점이 있다.
+
+OpenAI function tool schema는 기본적으로 input parameters 중심이다.
+
+따라서 `outputSchema`나 `errorContract`가 표준 필드로 항상 존재한다고 가정하면 안 된다.
+
+v0.1에서는 다음처럼 보수적으로 적용한다.
+
+```text
+read-only pure query tool
+→ missing-output-contract는 info/warning
+
+write/destructive/external_side_effect/financial tool
+→ missing-output-contract는 medium 이상 가능
+
+민감정보, source, timestamp가 중요한 read tool
+→ output contract와 source/timestamp를 더 강하게 본다.
+```
+
 ## Rule 5. error contract 검사
 
 나쁜 error:
@@ -668,6 +811,23 @@ description에 error behavior가 있는가?
 metadata.errorContract가 있는가?
 output schema에 ok:false path가 있는가?
 ```
+
+error contract도 risk-aware severity로 적용한다.
+
+```text
+read-only pure query tool
+→ missing-error-contract는 warning 정도
+
+write/destructive/external_side_effect tool
+→ missing-error-contract는 high 가능
+
+financial/destructive tool
+→ error contract와 retry/idempotency 설명 누락은 critical 가능
+```
+
+이렇게 해야 false positive가 줄어든다.
+
+린터가 너무 시끄러우면 개발자는 끈다.
 
 ## Rule 6. approval boundary 검사
 
@@ -779,11 +939,18 @@ fixtures/
   good/
     search-docs.json
     preview-calendar-event.json
+    search-docs-query-string.json
+    send-email-with-approval-and-error-contract.json
+    create-calendar-with-preview-and-idempotency.json
   bad/
     vague-send-email.json
     loose-calendar-input.json
     destructive-delete-no-confirmation.json
     charge-card-no-idempotency.json
+  edge/
+    draft-email-local-preview.json
+    draft-email-external-service-write.json
+    query-string-write-tool-bad.json
 ```
 
 각 fixture는 예상 issue를 가진다.
@@ -804,6 +971,22 @@ fixtures/
 
 이것이 11장의 golden task 역할을 한다.
 
+bad를 잘 잡는 것만큼 중요한 것이 있다.
+
+좋은 schema를 괜히 때리지 않는 것이다.
+
+예:
+
+```text
+approval boundary가 명확하고,
+recipient/content confirmation이 있고,
+error contract가 있고,
+idempotency guidance가 있는 send_email
+→ high severity issue가 없어야 한다.
+```
+
+이런 fixture가 있어야 린터가 “겁주는 장난감”이 아니라 실제 개발 도구가 된다.
+
 ## 평가 기준
 
 완료는 “CLI가 실행된다”가 아니다.
@@ -820,7 +1003,9 @@ fixtures/
 7. --format markdown이 GitHub README/PR에 붙일 수 있는 report를 출력한다.
 8. --fail-on high가 high 이상 issue에서 non-zero exit code를 반환한다.
 9. fixture 기반 regression test가 있다.
-10. README에 limitation이 명시되어 있다.
+10. good send_email fixture는 high severity issue를 내지 않는다.
+11. draft_email local preview와 external service write를 다르게 분류한다.
+12. README에 limitation이 명시되어 있다.
 ```
 
 ## 완료 체크리스트
@@ -835,7 +1020,7 @@ fixtures/
 - [ ] json report가 안정적인 shape를 가진다.
 - [ ] markdown report를 생성한다.
 - [ ] --fail-on 옵션이 있다.
-- [ ] good/bad fixture가 있다.
+- [ ] good/bad/edge fixture가 있다.
 - [ ] regression test가 있다.
 - [ ] README에 사용 예시가 있다.
 - [ ] README에 false positive / false negative 한계가 있다.
@@ -876,12 +1061,17 @@ README 구조:
 
 이 도구는 보안 인증 도구가 아니다.
 
+security scanner도 아니다.
+
+정확한 포지션은 schema linter다.
+
 ```text
 정적 schema lint 도구다.
 runner validation을 대체하지 않는다.
 approval policy를 대체하지 않는다.
 실제 tool implementation을 분석하지 않는다.
 heuristic risk classification은 틀릴 수 있다.
+false positive와 false negative가 있다.
 ```
 
 이 limitation을 써야 신뢰가 생긴다.
@@ -951,6 +1141,7 @@ OpenAPI에서 tool schema 추출
 rule config 파일
 ignore rule comment
 SARIF output
+GitHub Code Scanning 연동
 ```
 
 v0.4:
